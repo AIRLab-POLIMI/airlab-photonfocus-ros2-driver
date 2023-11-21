@@ -1,6 +1,6 @@
 """
 =====================================================================================================================
-File: photonfocus_camera.py
+File: nir.launch.py
 Author: Mirko Usuelli (Ph.D. Candidate, Politecnico di Milano @ AIRLab)
 Email: mirko.usuell@polimi.it
 Description: This file contains the launch file to start the PhotonFocus camera driver for the NIR camera.
@@ -23,7 +23,7 @@ def generate_launch_description():
             parameters=[
                 {'topic': '/nir',
                  'frame_id': 'nir_camera_link',
-                 'ip_address': '10.79.2.145',
+                 'ip_address': '192.168.1.38', #'10.79.2.78',
                  'config_file_path': '/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-driver/config/nir_camera.yaml'}
             ]
         )

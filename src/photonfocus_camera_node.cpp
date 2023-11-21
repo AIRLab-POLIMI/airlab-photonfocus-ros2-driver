@@ -16,6 +16,7 @@
 #include "rclcpp/node.hpp"
 #include "rclcpp/parameter.hpp"
 #include "rclcpp/parameter_value.hpp"
+#include "std_srvs/srv/empty.hpp"
 #include "sensor_msgs/msg/image.hpp"
 #include "cv_bridge/cv_bridge.h"
 
@@ -26,6 +27,8 @@
 #include <string>
 #include <fstream>
 #include <yaml-cpp/yaml.h>
+#include <condition_variable>
+#include <mutex>
 
 // PhotonFocus header
 #include "photonfocus_camera.hpp"
@@ -47,7 +50,14 @@ namespace AIRLab {
         std::string ip_address_;  // PhotonFocus camera IP address
         std::string config_file_;  // YAML file path
         std::string tag_;  // camera type tag
+        cv::Mat hist;  // last histogram
+        rclcpp::Time last_time_;  // last time
         bool histagram_enabled_;  // whether histogram is enabled
+        rclcpp::Service<std_srvs::srv::Empty>::SharedPtr exposure_service_;
+        std::condition_variable cv;
+        std::mutex mtx;
+        int width;
+        int height;
 
     public:
         /**
@@ -76,8 +86,12 @@ namespace AIRLab {
             RCLCPP_INFO(this->get_logger(), "Config File Path: %s", config_file_.c_str());
 
             // Publishers
-            image_publisher_ = this->create_publisher<sensor_msgs::msg::Image>(image_topic_, 10);
-            hist_publisher_ = this->create_publisher<sensor_msgs::msg::Image>(hist_topic_, 10);
+            image_publisher_ = this->create_publisher<sensor_msgs::msg::Image>(image_topic_, 1);
+            hist_publisher_ = this->create_publisher<sensor_msgs::msg::Image>(hist_topic_, 1);
+
+            // Service
+            exposure_service_ = this->create_service<std_srvs::srv::Empty>("auto_exposure", 
+                std::bind(&PhotonFocusDriver::autoExposure, this, std::placeholders::_1, std::placeholders::_2));
 
             // Initialize camera
             camera_ = std::make_unique<AIRLab::PhotonFocusCamera>(ip_address_);
@@ -100,8 +114,8 @@ namespace AIRLab {
 
                 // Define device attributes
                 tag_ = cameraNode["type"].as<std::string>();
-                long width = cameraNode["width"].as<int>();
-                long height = cameraNode["height"].as<int>();
+                width = cameraNode["width"].as<int>();
+                height = cameraNode["height"].as<int>();
                 long offset_x = cameraNode["offset_x"].as<int>();
                 long offset_y = cameraNode["offset_y"].as<int>();
                 double exposure_time = cameraNode["exposure_time"].as<double>();
@@ -143,7 +157,7 @@ namespace AIRLab {
          * @details This function publishes the image to the ROS 2 topic.
          * @param img Image to be published.
          */
-        void publishImage(const cv::Mat& img) {
+        void publishImage(const cv::Mat& img) {  
             // Convert image to ROS 2 message
             cv_bridge::CvImage cv_image;
             cv_image.encoding = "mono8";
@@ -154,9 +168,10 @@ namespace AIRLab {
 
             // Publish image
             image_publisher_->publish(image_);
+            
+            this->publishHistogram(img);
 
-            if (histagram_enabled_)
-                this->publishHistogram(img);
+            cv.notify_one();
         }
 
         void publishHistogram(const cv::Mat& img) {
@@ -164,38 +179,112 @@ namespace AIRLab {
             int histSize = 256;
             float range[] = { 0, 256 };
             const float* histRange = { range };
-            cv::Mat hist;
 
             cv::calcHist(&img, 1, 0, cv::Mat(), hist, 1, &histSize, &histRange);
-
-            // Draw the histogram
-            int hist_w = 512, hist_h = 400;
-            int bin_w = cvRound((double)hist_w / histSize);
-
-            cv::Mat histImage(hist_h, hist_w, CV_8UC3, cv::Scalar(0, 0, 0));
-
-            // Normalize the histogram
-            cv::normalize(hist, hist, 0, histImage.rows, cv::NORM_MINMAX, -1, cv::Mat());
-
-            // Draw the histogram
-            for (int i = 1; i < histSize; i++) {
-                cv::line(histImage, cv::Point(bin_w * (i - 1), hist_h - cvRound(hist.at<float>(i - 1))),
-                    cv::Point(bin_w * (i), hist_h - cvRound(hist.at<float>(i))),
-                    cv::Scalar(255, 255, 255), 2, 8, 0);
-            }
-            cv::Mat grayImage;
-            cv::cvtColor(histImage, grayImage, cv::COLOR_BGR2GRAY);
-
-            // Convert image to ROS 2 message
-            cv_bridge::CvImage cv_image;
-            cv_image.encoding = "mono8";
-            cv_image.image = grayImage;
-            cv_image.header.stamp = this->now();
-            sensor_msgs::msg::Image image_ = *cv_image.toImageMsg();
-            image_.header.frame_id = frame_id_;
+            last_time_ = this->now();
 
             // Publish image
-            hist_publisher_->publish(image_);
+            if (histagram_enabled_) {
+                // Draw the histogram
+                int hist_w = 512, hist_h = 400;
+                int bin_w = cvRound((double)hist_w / histSize);
+
+                cv::Mat histImage(hist_h, hist_w, CV_8UC3, cv::Scalar(0, 0, 0));
+
+                // Normalize the histogram
+                cv::normalize(hist, hist, 0, histImage.rows, cv::NORM_MINMAX, -1, cv::Mat());
+
+                // Draw the histogram
+                for (int i = 1; i < histSize; i++) {
+                    cv::line(histImage, cv::Point(bin_w * (i - 1), hist_h - cvRound(hist.at<float>(i - 1))),
+                        cv::Point(bin_w * (i), hist_h - cvRound(hist.at<float>(i))),
+                        cv::Scalar(255, 255, 255), 2, 8, 0);
+                }
+                cv::Mat grayImage;
+                cv::cvtColor(histImage, grayImage, cv::COLOR_BGR2GRAY);
+
+                // Convert image to ROS 2 message
+                cv_bridge::CvImage cv_image;
+                cv_image.encoding = "mono8";
+                cv_image.image = grayImage;
+                cv_image.header.stamp = this->now();
+                sensor_msgs::msg::Image image_ = *cv_image.toImageMsg();
+                image_.header.frame_id = frame_id_;
+
+                hist_publisher_->publish(image_);
+            }
+        }
+
+        void autoExposure(const std::shared_ptr<std_srvs::srv::Empty::Request> request, 
+                    std::shared_ptr<std_srvs::srv::Empty::Response> response) {
+            RCLCPP_INFO(this->get_logger(), "Auto Exposure Service called");
+
+            std::map<float, float> exposure_correlation;
+            std::map<float, float> exposure_chi_square;
+
+            float min_correlation = std::numeric_limits<float>::max();
+            float max_correlation = std::numeric_limits<float>::min();
+            float min_chi_square = std::numeric_limits<float>::max();
+            float max_chi_square = std::numeric_limits<float>::min();
+
+            cv::Mat reference_hist = cv::Mat::zeros(256, 1, CV_32F);
+            reference_hist.at<float>(8, 0) = 1.0;
+            reference_hist.at<float>(56, 0) = 1.0;
+            reference_hist.at<float>(69, 0) = 1.0;
+            reference_hist.at<float>(220, 0) = 1.0;
+
+            for (double exposure = 13.0; exposure <= 66586.0; exposure += 1000.0) {
+                camera_->setDeviceAttributeDouble("ExposureTime", exposure);
+
+                auto right_now = this->now();
+                std::unique_lock<std::mutex> lck(mtx);
+                cv.wait(lck, [&]{ return last_time_ > right_now; });
+
+                cv::Mat converted_hist;
+                hist.convertTo(converted_hist, CV_32F);
+
+                // Find maximum value in the histogram
+                double minVal, maxVal;
+                cv::minMaxLoc(converted_hist, &minVal, &maxVal);
+                converted_hist = converted_hist / maxVal;
+
+                float correlation = cv::compareHist(converted_hist, reference_hist, cv::HISTCMP_CORREL);
+                float chi_square = cv::compareHist(converted_hist, reference_hist, cv::HISTCMP_CHISQR);
+
+                exposure_correlation[exposure] = correlation;
+                exposure_chi_square[exposure] = chi_square;
+
+                min_correlation = std::min(min_correlation, correlation);
+                max_correlation = std::max(max_correlation, correlation);
+                min_chi_square = std::min(min_chi_square, chi_square);
+                max_chi_square = std::max(max_chi_square, chi_square);
+
+                RCLCPP_INFO(this->get_logger(), "Exposure: %f us - Correlation: %f - Chi-Square: %f", exposure, correlation, chi_square);
+
+                // edge cases
+                if (exposure == 13.0)
+                    exposure = 0.0;
+                else if (exposure == 60000.0)
+                    exposure = 65586;
+            }
+
+            RCLCPP_INFO(this->get_logger(), "================================================");
+            std::priority_queue<std::pair<float, float>, std::vector<std::pair<float, float>>, std::greater<>> pq;
+
+            for (auto& [exposure, correlation] : exposure_correlation) {
+                correlation = (correlation - min_correlation) / (max_correlation - min_correlation);
+                exposure_chi_square[exposure] = (exposure_chi_square[exposure] - min_chi_square) / (max_chi_square - min_chi_square);
+
+                float total = correlation + exposure_chi_square[exposure];
+                pq.push({total, exposure});
+                RCLCPP_INFO(this->get_logger(), "Exposure: %f us - Score: %f", exposure, total);
+            }
+
+            double best_exposure_ = pq.top().second;
+            camera_->setDeviceAttributeDouble("ExposureTime", best_exposure_);
+            RCLCPP_INFO(this->get_logger(), "================================================");
+            RCLCPP_INFO(this->get_logger(), "BEST EXPOSURE TIME: %f", best_exposure_);
+            RCLCPP_INFO(this->get_logger(), "================================================");
         }
     };
 }

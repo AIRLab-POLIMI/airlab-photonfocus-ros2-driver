@@ -21,7 +21,7 @@ if(NOT CMAKE_CXX_STANDARD)
 endif()
 
 # Warnings
-add_compile_options(-Wall -Wextra -Wpedantic -Wno-terminate -W)
+add_compile_options(-Wall -Wextra -Wpedantic -Wno-terminate -Wunused-parameter -W)
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
@@ -31,6 +31,7 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(yaml_cpp_vendor REQUIRED)
+find_package(std_srvs REQUIRED)
 
 # External cmake
 include(cmake/FindEbus-sdk.cmake)
@@ -68,13 +69,12 @@ endif()
 
 # ROS 2
 ament_target_dependencies(airlab_photonfocus
-  rclcpp sensor_msgs yaml_cpp_vendor
+  rclcpp sensor_msgs yaml_cpp_vendor std_srvs
 )
 
 # Add executable
 add_executable(photonfocus_camera_node src/photonfocus_camera_node.cpp)
 target_link_libraries(photonfocus_camera_node airlab_photonfocus)
-
 
 # Install
 install(TARGETS

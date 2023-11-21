@@ -1,30 +1,31 @@
 """
 =====================================================================================================================
-File: photonfocus_camera.py
+File: prisma.launch.py
 Author: Mirko Usuelli (Ph.D. Candidate, Politecnico di Milano @ AIRLab)
 Email: mirko.usuell@polimi.it
-Description: This file contains the launch file to start the PhotonFocus camera driver for the VIS camera.
+Description: This file contains the launch file to start the PhotonFocus camera driver for the prisma.
 ---------------------------------------------------------------------------------------------------------------------
-Created on: 05/02/2024
-Last Modified: 12/02/2024
+Created on: 27/02/2024
+Last Modified: 27/02/2024
 =====================================================================================================================
 """
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
-# Launch the PhotonFocus camera driver for the VIS camera
+# Launch the Prisma
 def generate_launch_description():
     return LaunchDescription([
         Node(
             package='airlab-photonfocus-ros2-driver',
-            executable='photonfocus_camera_node',
-            name='vis_photonfocus',
-            namespace='vis',
+            executable='photonfocus_prisma_node',
+            name='prisma_photonfocus',
+            namespace='prisma',
             parameters=[
-                {'topic': '/vis',
-                 'frame_id': 'vis_camera_link',
-                 'ip_address':'192.168.1.35', #'10.79.2.145',
-                 'config_file_path': '/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-driver/config/vis_camera.yaml'}
+                {'vis_topic': '/vis_raw_image',
+                 'vis_frame_id': 'vis_camera_link',
+                 'nir_topic': '/nir_raw_image',
+                 'nir_frame_id': 'vis_camera_link',}
             ]
         )
     ])
+    

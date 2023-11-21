@@ -8,13 +8,14 @@
 # Last Modified: 12/02/2024
 # =====================================================================================================================
 photonfocus_camera:
+  # parameters set for focus at 2.8
   type: "NIR"  # camera type
   width: 2048  # Width of the image in pixels
   height: 1088  # Height of the image in pixels
   offset_x: 0  # Offset of the image in the x-axis
   offset_y: 0  # Offset of the image in the y-axis
-  exposure_time: 10000  # Exposure time in microseconds
+  exposure_time: 10000  # Exposure time in microseconds (max 66586 us, min 13 us)
   acquisition_frame_rate_enable: True  # Enable the acquisition frame rate
   acquisition_frame_rate: 15  # Acquisition frame rate in Hz
   pixel_format: "MONO8"  # Pixel format of the image
-  histogram: true  # Image histogram
+  histogram: false  # Image histogram
