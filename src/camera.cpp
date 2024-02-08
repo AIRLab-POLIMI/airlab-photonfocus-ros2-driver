@@ -1,8 +1,9 @@
-#include "PvSampleUtils.h"
+//#include "PvSampleUtils.h"
 #include "PvDevice.h"
 #include "PvStream.h"
 #include "PvPipeline.h"
 
+/*
 class CameraStream
 {
 public:
@@ -49,3 +50,8 @@ private:
     PvPipeline* mPipeline;
     PvGenParameterArray* mDeviceParams;
 };
+*/
+
+int main() {
+    return 0;
+}

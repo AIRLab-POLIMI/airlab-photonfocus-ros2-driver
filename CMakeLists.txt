@@ -22,13 +22,35 @@ find_package(ament_cmake REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 # -------------------------------------------------------------------------------------------
+# EBUS SDK
+#set(EBUS_INCLUDE_DIRS "/opt/jai/ebus_sdk/linux-aarch64-arm/include")
+#set(EBUS_LIBRARIES PvSystem PvBase PvDevice PvPersistence PvGenICam PvStream PvTransmitter PvVirtualDevice PvAppUtils PvSerial PvGUI PvBuffer)
+#set(EBUS_LIB_DIRS "/opt/jai/ebus_sdk/linux-aarch64-arm/lib")
+#link_directories(${EBUS_LIB_DIRS})
 
-set(EBUS_SDK_PATH "/opt/jai/ebus_sdk/linux-aarch64-arm") # for Jetson, arm-based architecture
-include_directories(${EBUS_SDK_PATH}/include)
-link_directories(${EBUS_SDK_PATH}/lib)
+#set(EBUS_SDK_PATH "/opt/jai/ebus_sdk/linux-aarch64-arm") # for Jetson, arm-based architecture
+#set(EBUS_INCLUDE_DIRS ${EBUS_SDK_PATH}/include)
+#set(EBUS_LIBRARIES ${EBUS_SDK_PATH}/lib)
+#include_directories(${EBUS_INCLUDE_DIRS})
+#link_directories(${EBUS_LIBRARIES})
 
 #add_executable(camera_exe src/camera.cpp)
-#target_link_libraries(camera_exe ebus_sdk)
+#target_link_libraries(camera_exe PUBLIC ${EBUS_INCLUDE_DIRS})
+
+# Add the path to the eBUS SDK API headers
+#include_directories(/opt/jai/ebus_sdk/linux-aarch64-arm/include)
+
+# Create the executable
+#add_executable(camera src/camera.cpp)
+
+# Link the eBUS SDK API library
+#find_library(EBUS_LIB NAMES ebus PATHS /opt/jai/ebus_sdk/linux-aarch64-arm/lib)
+#target_link_libraries(camera ${EBUS_LIB})
+
+include(cmake/Findebus-sdk.cmake)
+add_executable(camera src/camera.cpp)
+target_link_libraries(camera ${ebus-sdk_LIBRARIES})
+target_include_directories(camera PRIVATE ${ebus-sdk_INCLUDE_DIR})
 
 # -------------------------------------------------------------------------------------------
 
