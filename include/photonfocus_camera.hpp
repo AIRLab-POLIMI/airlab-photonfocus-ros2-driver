@@ -10,7 +10,7 @@
 #include <thread>
 #include <atomic>
 #include <mutex>
-#include <boost/function.hpp>
+#include <functional>
 #include <opencv2/opencv.hpp>
 
 #include "PvDeviceGEV.h"
@@ -54,9 +54,9 @@ class PhotonFocusCamera
     std::shared_ptr<std::thread> image_thread;
 
 public:
-    boost::function<void(const cv::Mat &image)> callback;
+    std::function<void(const cv::Mat &image)> callback;
 
-    PhotonFocusCamera(std::string ip_address);
+    PhotonFocusCamera(const std::string& ip_address);
     ~PhotonFocusCamera();
 
     void start();

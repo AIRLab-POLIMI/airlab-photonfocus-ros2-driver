@@ -1,7 +1,7 @@
 #include "photonfocus_camera.hpp"
 
 namespace AIRLab {
-    PhotonFocusCamera::PhotonFocusCamera(std::string ip_address) : camera_id(ip_address.c_str()) {
+    PhotonFocusCamera::PhotonFocusCamera(const std::string& ip_address) : camera_id(ip_address.c_str()) {
         // Find the camera and connect to it
         PvAccessType access_type = getAccessType();
         if(access_type == PvAccessOpen) // The device is reachable and no one is connected to it
@@ -10,7 +10,7 @@ namespace AIRLab {
             //PvStream *lStream;
             std::cout << "Opening stream to device." << std::endl;
             //lStream = PvStream::CreateAndOpen(camera_id,&result);
-            device = static_cast<PvDeviceGEV *>(PvDevice::CreateAndConnect(camera_id,&result));
+            device = static_cast<PvDeviceGEV*>(PvDevice::CreateAndConnect(camera_id,&result));
             if(device == NULL || !result.IsOK()) // for some reason the device is not reachable anymore...
                 throw std::runtime_error("Device " + ip_address + " not found!");
         }
