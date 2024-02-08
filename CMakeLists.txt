@@ -21,6 +21,17 @@ find_package(ament_cmake REQUIRED)
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
 
+# -------------------------------------------------------------------------------------------
+
+set(EBUS_SDK_PATH "/opt/jai/ebus_sdk/linux-aarch64-arm") # for Jetson, arm-based architecture
+include_directories(${EBUS_SDK_PATH}/include)
+link_directories(${EBUS_SDK_PATH}/lib)
+
+#add_executable(camera_exe src/camera.cpp)
+#target_link_libraries(camera_exe ebus_sdk)
+
+# -------------------------------------------------------------------------------------------
+
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   # the following line skips the linter which checks for copyrights
