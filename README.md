@@ -1,5 +1,9 @@
 # AIRLab Photon Focus ROS2 Driver
 
+| Image                                   | Description                         |
+| --------------------------------------- | ----------------------------------- |
+| ![Square Image](img/logo.jpeg){ width=100px } | This is a placeholder description. It represents the right side of the table. |
+
 ## Description
 
 This project is designed to showcase the use of tables in Markdown files.
@@ -27,12 +31,6 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praes
   - [Installation](#installation)
   - [Usage](#usage)
   - [Table of Contents](#table-of-contents)
-
-## Example Table
-
-| Image                                   | Description                         |
-| --------------------------------------- | ----------------------------------- |
-| ![Square Image](img/logo.jpeg)          | This is a placeholder description. It represents the right side of the table. |
 
 ## License
 
