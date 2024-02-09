@@ -1,8 +1,10 @@
 # AIRLab Photon Focus ROS2 Driver
 
+<div align="center">
 | Image                                   | Description                         |
 | --------------------------------------- | ----------------------------------- |
-| <img src="img/logo.jpeg" width="100">   | This is a placeholder description. It represents the right side of the table. |
+| <img src="img/logo.jpeg" width="250">   | This is a placeholder description. It represents the right side of the table. |
+</div>
 
 ## Description
 
