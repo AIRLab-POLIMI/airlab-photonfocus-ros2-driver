@@ -17,25 +17,44 @@
 namespace AIRLab {
     class PhotonFocusDriver : public rclcpp::Node {
     private:
-        //sensor_msgs::msg::Image image_;
         std::unique_ptr<AIRLab::PhotonFocusCamera> camera_;
-        std::string frame_id_;
         rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
+        std::string frame_id_;
+        std::string topic_;
+        std::string ip_address_;
+        std::string config_file_;
 
     public:
-        PhotonFocusDriver(const std::string& camera_name, const std::string& ip, const std::string& yaml) : 
-            Node(camera_name), camera_(std::make_unique<AIRLab::PhotonFocusCamera>(ip)) {
+        PhotonFocusDriver() : Node("airlab_photonfocus") {
+            // Declare parameters
+            this->declare_parameter<std::string>("topic", "/vis_image_raw");
+            this->declare_parameter<std::string>("frame_id", "vis_camera_link");
+            this->declare_parameter<std::string>("ip_address", "10.79.2.78");
+            this->declare_parameter<std::string>("config_file_path", "/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-wrapper/config/default_camera.yaml");
+
+            // Get parameter values
+            topic_ = this->get_parameter("topic").as_string();
+            frame_id_ = this->get_parameter("frame_id").as_string();
+            ip_address_ = this->get_parameter("ip_address").as_string();
+            config_file_ = this->get_parameter("config_file_path").as_string();
+
+            // Use the parameter values as needed
+            RCLCPP_INFO(this->get_logger(), "Topic: %s", topic_.c_str());
+            RCLCPP_INFO(this->get_logger(), "Frame ID: %s", frame_id_.c_str());
+            RCLCPP_INFO(this->get_logger(), "IP Address: %s", ip_address_.c_str());
+            RCLCPP_INFO(this->get_logger(), "Config File Path: %s", config_file_.c_str());
+
+            // Publisher
+            publisher_ = this->create_publisher<sensor_msgs::msg::Image>(topic_, 10);
+
             // Initialize camera
+            camera_ = std::make_unique<AIRLab::PhotonFocusCamera>(ip_address_);
             camera_->start();
             camera_->callback = std::bind(&PhotonFocusDriver::publishImage, this, std::placeholders::_1);
-            publisher_ = this->create_publisher<sensor_msgs::msg::Image>("/hyperspectral", 10);
-
-            this->declare_parameter<std::string>("frame_id", "photonfocus_camera_link");
-            frame_id_ = this->get_parameter("frame_id").as_string();
 
             // Reading params from YAML file
             try {
-                std::ifstream file(yaml);
+                std::ifstream file(config_file_);
                 if (!file.is_open()) {
                     throw std::runtime_error("YAML file not found");
                 }
@@ -71,8 +90,6 @@ namespace AIRLab {
             } catch (const std::exception& e) {
                 RCLCPP_ERROR(this->get_logger(), "%s", e.what());
             }
-
-            RCLCPP_INFO(this->get_logger(), "===== PhotonFocus Camera STARTED =====");
         }
 
         ~PhotonFocusDriver() {
@@ -99,7 +116,7 @@ namespace AIRLab {
 int main(int argc, char** argv)
 {
     rclcpp::init(argc, argv);
-    auto node = std::make_shared<AIRLab::PhotonFocusDriver>("airlab_photonfocus", "10.79.2.78", "/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-wrapper/config/photonfocus_camera.yaml");
+    auto node = std::make_shared<AIRLab::PhotonFocusDriver>();
     rclcpp::spin(node);
     rclcpp::shutdown();
     return 0;

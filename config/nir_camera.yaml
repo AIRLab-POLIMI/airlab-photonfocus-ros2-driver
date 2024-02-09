@@ -1,0 +1,9 @@
+photonfocus_camera:
+  width: 2048
+  height: 1088
+  offset_x: 0
+  offset_y: 0
+  exposure_time: 10000
+  acquisition_frame_rate_enable: True
+  acquisition_frame_rate: 15
+  pixel_format: "MONO8"
