@@ -1,6 +1,6 @@
-# AIRLab Photon Focus ROS2 Driver
-
 <div align="center">
+
+# AIRLab PhotonFocus ROS2 Driver
   
 | Image                                   | Description                         |
 | --------------------------------------- | ----------------------------------- |
