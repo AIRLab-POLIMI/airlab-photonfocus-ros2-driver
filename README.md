@@ -2,7 +2,7 @@
 
 | Image                                   | Description                         |
 | --------------------------------------- | ----------------------------------- |
-| ![Square Image](img/logo.jpeg){ width=100px } | This is a placeholder description. It represents the right side of the table. |
+| <img src="img/logo.jpeg" width="100">   | This is a placeholder description. It represents the right side of the table. |
 
 ## Description
 
