@@ -8,7 +8,7 @@
 # Last Modified: 12/02/2024
 # =====================================================================================================================
 cmake_minimum_required(VERSION 3.5)
-project(airlab-photonfocus-ros2-wrapper)
+project(airlab-photonfocus-ros2-driver)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)

@@ -66,7 +66,7 @@ namespace AIRLab {
     };
 
     /**
-     * This class is a wrapper for the PhotonFocus camera. It uses the PvAPI library to communicate with the camera.
+     * This class is a driver for the PhotonFocus camera. It uses the PvAPI library to communicate with the camera.
      * The class is responsible for opening and closing the camera, setting the camera parameters, and acquiring images.
      * The class also provides a callback mechanism to notify the user when a new image is available.
      */

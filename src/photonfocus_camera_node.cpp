@@ -56,7 +56,7 @@ namespace AIRLab {
             this->declare_parameter<std::string>("frame_id", "vis_camera_link");
             this->declare_parameter<std::string>("ip_address", "10.79.2.78");
             this->declare_parameter<std::string>("config_file_path",
-                "/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-wrapper/config/default_camera.yaml");
+                "/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-driver/config/default_camera.yaml");
 
             // Get parameter values
             topic_ = this->get_parameter("topic").as_string();
