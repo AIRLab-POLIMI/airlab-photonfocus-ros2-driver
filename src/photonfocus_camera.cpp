@@ -1,17 +1,34 @@
+/* =====================================================================================================================
+ * File: photonfocus_camera.cpp
+ * Author: Mirko Usuelli (Ph.D. Candidate, Politecnico di Milano @ AIRLab)
+ * Email: mirko.usuell@polimi.it
+ * Description: This file contains the pure C++ implementation for the PhotonFocus camera.
+ * ---------------------------------------------------------------------------------------------------------------------
+ * Created on: 05/02/2024
+ * Last Modified: 12/02/2024
+ * =====================================================================================================================
+ */
+// PhotonFocus camera header
 #include "photonfocus_camera.hpp"
 
+// AIRLab namespace
 namespace AIRLab {
+    /**
+     * Constructor
+     * @param ip_address The IP address of the camera
+     */
     PhotonFocusCamera::PhotonFocusCamera(const std::string& ip_address) : camera_id(ip_address.c_str()) {
         // Find the camera and connect to it
         PvAccessType access_type = getAccessType();
-        if(access_type == PvAccessOpen) // The device is reachable and no one is connected to it
-        {
+
+        // The device is reachable and no one is connected to it
+        if(access_type == PvAccessOpen) {
             PvResult result;
-            //PvStream *lStream;
             std::cout << "Opening stream to device." << std::endl;
-            //lStream = PvStream::CreateAndOpen(camera_id,&result);
             device = static_cast<PvDeviceGEV*>(PvDevice::CreateAndConnect(camera_id,&result));
-            if(device == NULL || !result.IsOK()) // for some reason the device is not reachable anymore...
+
+            // for some reason the device is not reachable anymore...
+            if(device == NULL || !result.IsOK())
                 throw std::runtime_error("Device " + ip_address + " not found!");
         }
         else if(access_type == PvAccessUnknown) // the device is not reachable
@@ -19,20 +36,29 @@ namespace AIRLab {
         else // the device is reachable, but someone is connected to it
             throw std::runtime_error("Another process is using the camera " + ip_address);
 
+        // Get the device parameters
         device_parameters = device->GetParameters();
     }
 
-
+    /**
+     * Destructor
+     */
     PhotonFocusCamera::~PhotonFocusCamera() {
         CHECK_RESULT(device->Disconnect());
         PvDevice::Free(device);
         std::cout << std::endl;
     }
 
+    /**
+     * Stop the image acquisition thread
+     */
     void PhotonFocusCamera::interruptThread() {
         stop_thread.store(true);
     }
 
+    /**
+     * Open the camera
+     */
     void PhotonFocusCamera::start() {
         open();
         device_parameters->ExecuteCommand("GevTimestampControlReset");
@@ -44,12 +70,18 @@ namespace AIRLab {
         image_thread.reset(new std::thread(&AIRLab::PhotonFocusCamera::acquireImages, this));
     }
 
+    /**
+     * Close the camera
+     */
     void PhotonFocusCamera::stop() {
         // Tell the camera to stop sending images
         device_parameters->ExecuteCommand("AcquisitionStop");
         close();
     }
 
+    /**
+     * Open the camera
+     */
     void PhotonFocusCamera::open() {
         // Test the network connection for the largest possible packet size that the network 
         // can support on the link between camera and controller
@@ -62,15 +94,18 @@ namespace AIRLab {
         if(stream == NULL)
             throw std::runtime_error(std::string("Unable to stream from ") + camera_id.GetAscii() + ".");
 
-        stream_parameters = stream->GetParameters(); // get stream parameters (for future usages)
+        // Get stream parameters (for future usages)
+        stream_parameters = stream->GetParameters();
 
-        // One endpoint of the stream is the camera itself, the other one is this software on the controller and it must be specified
+        // One endpoint of the stream is the camera itself,
+        // the other one is this software on the controller and it must be specified
         PvStreamGEV* stream_gev = static_cast<PvStreamGEV*>(this->stream);
         device->SetStreamDestination(stream_gev->GetLocalIPAddress(), stream_gev->GetLocalPort());
 
         // Pipeline initialization (it manages buffers)
         pipeline = new PvPipeline(stream);
 
+        // Get the payload size
         int payload_size = device->GetPayloadSize();
 
         // Set the Buffer count and the Buffer size
@@ -82,20 +117,24 @@ namespace AIRLab {
         device->StreamEnable();
     }
 
+    /**
+     * Close the camera
+     */
     void PhotonFocusCamera::close() {
+        // Stop the pipeline and close the stream
         interruptThread();
         image_thread->join();
         image_thread.reset();
-
         device->StreamDisable();
-
         pipeline->Stop();
         delete pipeline;
-
         stream->Close();
         PvStream::Free(stream);
     }
 
+    /**
+     * Start the image acquisition thread
+     */
     void PhotonFocusCamera::acquireImages() {
         std::unique_lock<std::mutex> lock(mtx);
         char doodle[] = "|\\-|-/";
@@ -110,9 +149,9 @@ namespace AIRLab {
             PvBuffer *buffer = NULL;
             PvImage *image = NULL;
             cv::Mat raw_image;
-
             PvResult buffer_result, operation_result;
 
+            // Retrieve next buffer
             operation_result = pipeline->RetrieveNextBuffer(&buffer, 1000, &buffer_result);
 
             // operation results says about the retrieving from the pipeline
@@ -150,9 +189,8 @@ namespace AIRLab {
                 // release the buffer back to the pipeline
                 pipeline->ReleaseBuffer(buffer);
             }
-            else {
+            else
                 std::cout << doodle[doodle_index] << " " << buffer_result.GetCode() << " " << buffer_result.GetDescription().GetAscii() << "\r";
-            }
 
             // when the interruption on the thread is called, its execution must reach this point! 
             // in this way the whole should be in a clear state
@@ -163,12 +201,23 @@ namespace AIRLab {
         }
     }
 
+    /**
+     * Get access type
+     * @return The access type
+     */
     PvAccessType PhotonFocusCamera::getAccessType() {
         PvAccessType access_type;
         PvDeviceGEV::GetAccessType(camera_id,access_type);
         return access_type;
     }
 
+    /**
+     * Get device attribute
+     * @param name The name of the attribute
+     * @param min Pointer to the minimum value
+     * @param max Pointer to the maximum value
+     * @return The value of the attribute
+     */
     template <typename ParamType, typename ValueType>
     ValueType PhotonFocusCamera::getDeviceAttribute(std::string name, ValueType* min, ValueType* max) {
         if (!device_parameters)
@@ -186,5 +235,118 @@ namespace AIRLab {
         if (max)
             CHECK_RESULT(parameter->GetMax(*max));
         return value;
+    }
+
+    /**
+     * Set device attribute
+     * @param name The name of the attribute
+     * @param value The value of the attribute
+     * @param setter The setter function
+     */
+    template <typename ParamType, typename ValueType, typename SetterFunction>
+    void PhotonFocusCamera::setDeviceAttribute(std::string name, ValueType value, SetterFunction setter) {
+        if (!device_parameters)
+            throw std::runtime_error("Device parameters are not yet initialized.");
+
+        ParamType* parameter = dynamic_cast<ParamType*>(device->GetParameters()->Get(PvString(name.c_str())));
+
+        if (!parameter)
+            throw std::runtime_error("Attribute " + name + " does not exist.");
+
+        if (!parameter->IsWritable()) {
+            std::cout << name << " is not writable at the time..." << std::endl;
+            return;
+        }
+
+        // Use the provided setter function to set the attribute value
+        (this->*setter)(parameter, value);
+    }
+
+    /**
+     * Set device attribute for boolean
+     * @param name The name of the attribute
+     * @param value The value of the attribute
+     */
+    void PhotonFocusCamera::setDeviceAttributeBool(std::string name, bool value) {
+        setDeviceAttribute<PvGenBoolean, bool>(name, value, &PhotonFocusCamera::setBooleanAttribute);
+    }
+
+    /**
+     * Set device attribute for long
+     * @param name The name of the attribute
+     * @param value The value of the attribute
+     */
+    void PhotonFocusCamera::setDeviceAttributeLong(std::string name, long value) {
+        setDeviceAttribute<PvGenInteger, long>(name, value, &PhotonFocusCamera::setIntegerAttribute);
+    }
+
+    /**
+     * Set device attribute for string
+     * @param name The name of the attribute
+     * @param value The value of the attribute
+     */
+    void PhotonFocusCamera::setDeviceAttributeString(std::string name, std::string value) {
+        setDeviceAttribute<PvGenEnum, std::string>(name, value, &PhotonFocusCamera::setStringAttribute);
+    }
+
+    /**
+     * Set device attribute for double
+     * @param name The name of the attribute
+     * @param value The value of the attribute
+     */
+    void PhotonFocusCamera::setDeviceAttributeDouble(std::string name, double value) {
+        setDeviceAttribute<PvGenFloat, double>(name, value, &PhotonFocusCamera::setDoubleAttribute);
+    }
+
+    /**
+     * Set device attribute for boolean
+     * @param parameter The parameter
+     * @param value The value of the attribute
+     */
+    void PhotonFocusCamera::setBooleanAttribute(PvGenBoolean* parameter, bool value) {
+        CHECK_RESULT(parameter->SetValue(value));
+    }
+
+    /**
+     * Set device attribute for long
+     * @param parameter The parameter
+     * @param value The value of the attribute
+     */
+    void PhotonFocusCamera::setIntegerAttribute(PvGenInteger* parameter, long value) {
+        CHECK_RESULT(parameter->SetValue(value));
+    }
+
+    /**
+     * Set device attribute for string
+     * @param parameter The parameter
+     * @param value The value of the attribute
+     */
+    void PhotonFocusCamera::setStringAttribute(PvGenEnum* parameter, std::string value) {
+        // Check if the value is in the range
+        long entries;
+        bool is_in = false;
+        CHECK_RESULT(parameter->GetEntriesCount(entries));
+        for (int i = 0; i < entries && !is_in; i++) {
+            const PvGenEnumEntry* entry;
+            CHECK_RESULT(parameter->GetEntryByIndex(i, &entry));
+            PvString current_value;
+            CHECK_RESULT(entry->GetName(current_value));
+            if (value == std::string(current_value.GetAscii()))
+                is_in = true;
+        }
+
+        if (!is_in) {
+            return;
+        }
+        CHECK_RESULT(parameter->SetValue(PvString(value.c_str())));
+    }
+
+    /**
+     * Set device attribute for double
+     * @param parameter The parameter
+     * @param value The value of the attribute
+     */
+    void PhotonFocusCamera::setDoubleAttribute(PvGenFloat* parameter, double value) {
+        CHECK_RESULT(parameter->SetValue(value));
     }
 }

@@ -1,9 +1,18 @@
+# =====================================================================================================================
+# File: photonfocus_camera.yaml
+# Author: Mirko Usuelli (Ph.D. Candidate, Politecnico di Milano @ AIRLab)
+# Email: mirko.usuell@polimi.it
+# Description: This file contains the configuration for the PhotonFocus NIR camera.
+# ---------------------------------------------------------------------------------------------------------------------
+# Created on: 05/02/2024
+# Last Modified: 12/02/2024
+# =====================================================================================================================
 photonfocus_camera:
-  width: 2048
-  height: 1088
-  offset_x: 0
-  offset_y: 0
-  exposure_time: 10000
-  acquisition_frame_rate_enable: True
-  acquisition_frame_rate: 15
-  pixel_format: "MONO8"
+  width: 2048  # Width of the image in pixels
+  height: 1088  # Height of the image in pixels
+  offset_x: 0  # Offset of the image in the x-axis
+  offset_y: 0  # Offset of the image in the y-axis
+  exposure_time: 10000  # Exposure time in microseconds
+  acquisition_frame_rate_enable: True  # Enable the acquisition frame rate
+  acquisition_frame_rate: 15  # Acquisition frame rate in Hz
+  pixel_format: "MONO8"  # Pixel format of the image

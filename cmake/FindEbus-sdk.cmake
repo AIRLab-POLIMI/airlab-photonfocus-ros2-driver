@@ -1,3 +1,12 @@
+# =====================================================================================================================
+# File: photonfocus_camera.yaml
+# Author: Mirko Usuelli (Ph.D. Candidate, Politecnico di Milano @ AIRLab)
+# Email: mirko.usuell@polimi.it
+# Description: This file contains the FindEBUS_SDK.cmake script to find the Photonfocus SDK
+# ---------------------------------------------------------------------------------------------------------------------
+# Created on: 05/02/2024
+# Last Modified: 12/02/2024
+# =====================================================================================================================
 set(PACKAGE_HEADER_FILES PvBase.h)
 # log4cxx
 

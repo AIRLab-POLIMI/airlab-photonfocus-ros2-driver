@@ -1,11 +1,23 @@
+"""
+=====================================================================================================================
+File: photonfocus_camera.py
+Author: Mirko Usuelli (Ph.D. Candidate, Politecnico di Milano @ AIRLab)
+Email: mirko.usuell@polimi.it
+Description: This file contains the launch file to start the PhotonFocus camera driver for the VIS and NIR camera.
+---------------------------------------------------------------------------------------------------------------------
+Created on: 05/02/2024
+Last Modified: 12/02/2024
+=====================================================================================================================
+"""
 from launch import LaunchDescription
 from launch_ros.actions import Node
 import launch.actions
 import launch.substitutions
 
-
+# Launch description for the PhotonFocus camera driver, which includes the NIR and VIS cameras.
 def generate_launch_description():
     return LaunchDescription([
+        # NIR camera
         Node(
             package='airlab-photonfocus-ros2-wrapper',
             executable='image_publisher_node',
@@ -18,6 +30,7 @@ def generate_launch_description():
                  'config_file_path': '/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-wrapper/config/nir_camera.yaml'}
             ]
         ),
+        # VIS camera
         Node(
             package='airlab-photonfocus-ros2-wrapper',
             executable='image_publisher_node',

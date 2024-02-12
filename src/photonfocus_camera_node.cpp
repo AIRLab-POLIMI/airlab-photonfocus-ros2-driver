@@ -1,3 +1,17 @@
+/* =====================================================================================================================
+ * File: photonfocus_camera.cpp
+ * Author: Mirko Usuelli (Ph.D. Candidate, Politecnico di Milano @ AIRLab)
+ * Email: mirko.usuell@polimi.it
+ * Description: This file contains the ROS 2 implementation for the PhotonFocus camera driver.
+ * ---------------------------------------------------------------------------------------------------------------------
+ * Created on: 05/02/2024
+ * Last Modified: 12/02/2024
+ * =====================================================================================================================
+ */
+#ifndef PHOTONFOCUS_CAMERA_NODE_HPP
+#define PHOTONFOCUS_CAMERA_NODE_HPP
+
+// ROS 2 libraries
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp/node.hpp"
 #include "rclcpp/parameter.hpp"
@@ -5,6 +19,7 @@
 #include "sensor_msgs/msg/image.hpp"
 #include "cv_bridge/cv_bridge.h"
 
+// C++ libraries
 #include <iostream>
 #include <iomanip>
 #include <memory>
@@ -12,25 +27,36 @@
 #include <fstream>
 #include <yaml-cpp/yaml.h>
 
+// PhotonFocus header
 #include "photonfocus_camera.hpp"
 
+// AIRLab namespace
 namespace AIRLab {
+    /**
+     * @brief PhotonFocusDriver class
+     * This class is a ROS 2 node that interfaces with the PhotonFocus camera.
+     */
     class PhotonFocusDriver : public rclcpp::Node {
     private:
-        std::unique_ptr<AIRLab::PhotonFocusCamera> camera_;
-        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;
-        std::string frame_id_;
-        std::string topic_;
-        std::string ip_address_;
-        std::string config_file_;
+        std::unique_ptr<AIRLab::PhotonFocusCamera> camera_;  // PhotonFocus camera object
+        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;  // ROS 2 publisher
+        std::string frame_id_;  // ROS 2 frame ID
+        std::string topic_;  // ROS 2 topic
+        std::string ip_address_;  // PhotonFocus camera IP address
+        std::string config_file_;  // YAML file path
 
     public:
+        /**
+         * @brief Constructor
+         * @details The constructor initializes the ROS 2 node and the PhotonFocus camera.
+         */
         PhotonFocusDriver() : Node("airlab_photonfocus") {
             // Declare parameters
             this->declare_parameter<std::string>("topic", "/vis_image_raw");
             this->declare_parameter<std::string>("frame_id", "vis_camera_link");
             this->declare_parameter<std::string>("ip_address", "10.79.2.78");
-            this->declare_parameter<std::string>("config_file_path", "/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-wrapper/config/default_camera.yaml");
+            this->declare_parameter<std::string>("config_file_path",
+                "/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-wrapper/config/default_camera.yaml");
 
             // Get parameter values
             topic_ = this->get_parameter("topic").as_string();
@@ -66,6 +92,7 @@ namespace AIRLab {
                     throw std::runtime_error("photonfocus_camera node not found in YAML file");
                 }
 
+                // Define device attributes
                 long width = cameraNode["width"].as<int>();
                 long height = cameraNode["height"].as<int>();
                 long offset_x = cameraNode["offset_x"].as<int>();
@@ -92,6 +119,10 @@ namespace AIRLab {
             }
         }
 
+        /**
+         * @brief Destructor
+         * @details The destructor stops the camera and releases the resources.
+         */
         ~PhotonFocusDriver() {
             camera_->stop();
             camera_.reset();
@@ -99,7 +130,13 @@ namespace AIRLab {
         }
 
     private:
+        /**
+         * @brief Publish image
+         * @details This function publishes the image to the ROS 2 topic.
+         * @param img Image to be published.
+         */
         void publishImage(const cv::Mat& img) {
+            // Convert image to ROS 2 message
             cv_bridge::CvImage cv_image;
             cv_image.encoding = "mono8";
             cv_image.image = img;
@@ -107,14 +144,18 @@ namespace AIRLab {
             sensor_msgs::msg::Image image_ = *cv_image.toImageMsg();
             image_.header.frame_id = frame_id_;
 
+            // Publish image
             publisher_->publish(image_);
         }
     };
 }
+#endif // PHOTONFOCUS_CAMERA_NODE_HPP
 
 
-int main(int argc, char** argv)
-{
+/**
+ * Main function, ROS 2 single thread standard.
+ */
+int main(int argc, char** argv) {
     rclcpp::init(argc, argv);
     auto node = std::make_shared<AIRLab::PhotonFocusDriver>();
     rclcpp::spin(node);

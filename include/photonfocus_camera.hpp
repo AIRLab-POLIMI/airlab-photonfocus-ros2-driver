@@ -1,8 +1,17 @@
-#ifndef PHOTONFOCUS_CAMERA_H
-#define PHOTONFOCUS_CAMERA_H
+/* =====================================================================================================================
+ * File: photonfocus_camera.hpp
+ * Author: Mirko Usuelli (Ph.D. Candidate, Politecnico di Milano @ AIRLab)
+ * Email: mirko.usuell@polimi.it
+ * Description: This file contains the pure C++ header for the PhotonFocus camera.
+ * ---------------------------------------------------------------------------------------------------------------------
+ * Created on: 05/02/2024
+ * Last Modified: 12/02/2024
+ * =====================================================================================================================
+ */
+#ifndef PHOTONFOCUS_CAMERA_HPP
+#define PHOTONFOCUS_CAMERA_HPP
 
-#define BUFFER_COUNT 16 // TODO number of buffers from parameters?
-
+// Include the standard C++ headers
 #include <iostream>
 #include <iomanip>
 #include <stdexcept>
@@ -11,13 +20,27 @@
 #include <atomic>
 #include <mutex>
 #include <functional>
+
+// Include the OpenCV headers
 #include <opencv2/opencv.hpp>
 
+// Include the PvAPI library, eBUS SDK
 #include "PvDeviceGEV.h"
 #include "PvStreamGEV.h"
 #include "PvPipeline.h"
 
-// THIS MACRO EXPLOITS RESULT DESCRIPTION FOR THROWING EXCEPTIONS ON EXPR WHICH RETURNS A PvResult
+/**
+ * This macro is used to check the result of a PvAPI function call and throw an exception if it fails.
+ * It is used to avoid writing the same code over and over again.
+ * The macro is used as follows:
+ *  \code
+ *      CHECK_RESULT(PvDevice::CreateAndConnect(device, PvString("
+ *  \endcode
+ * The macro will throw an exception if the result of the expression is not OK.
+ * The exception will contain the file name and line number where the error occurred, as well as the error message.
+ * The macro is defined as a do-while loop to avoid problems when used in if-else statements.
+ * The macro is also defined as a multi-statement macro to avoid problems when used with if-else statements.
+ */
 #define CHECK_RESULT(expression) \
 do { \
     try { \
@@ -30,120 +53,165 @@ do { \
     } \
 } while (false)
 
-namespace AIRLab
-{
+// Number of buffers used for image acquisition
+#define BUFFER_COUNT 16
 
-// this was imported from driver_common, since the latter seems deprecated.
-enum {
-  RECONFIGURE_CLOSE = 3,
-  RECONFIGURE_STOP = 1,
-  RECONFIGURE_RUNNING = 0,
-};
+// AIRLab namespace
+namespace AIRLab {
+    // Enumeration to indicate the state of the reconfiguration process
+    enum {
+      RECONFIGURE_CLOSE = 3,
+      RECONFIGURE_STOP = 1,
+      RECONFIGURE_RUNNING = 0,
+    };
 
-class PhotonFocusCamera
-{
-    // FIXME it is necessary to specialize the exceptions...
-    PvDevice* device;
-    PvStream* stream;
-    PvPipeline* pipeline;
-    PvString camera_id; // IP
+    /**
+     * This class is a wrapper for the PhotonFocus camera. It uses the PvAPI library to communicate with the camera.
+     * The class is responsible for opening and closing the camera, setting the camera parameters, and acquiring images.
+     * The class also provides a callback mechanism to notify the user when a new image is available.
+     */
+    class PhotonFocusCamera {
+        PvDevice* device;  // Pointer to the device object
+        PvStream* stream;  // Pointer to the stream object
+        PvPipeline* pipeline;  // Pointer to the pipeline object
+        PvString camera_id;  // Camera ID (IP address)
 
-    PvGenParameterArray* device_parameters;
-    PvGenParameterArray* stream_parameters;
+        PvGenParameterArray* device_parameters; // Pointer to the device parameters
+        PvGenParameterArray* stream_parameters;  // Pointer to the stream parameters
 
-    std::shared_ptr<std::thread> image_thread;
+        std::shared_ptr<std::thread> image_thread;  // Thread used to acquire images
 
-public:
-    std::function<void(const cv::Mat &image)> callback;
+    private:
+        std::atomic<bool> stop_thread { false };  // Flag to stop the image acquisition thread
+        std::mutex mtx;  // Mutex to protect the image buffer
 
-    PhotonFocusCamera(const std::string& ip_address);
-    ~PhotonFocusCamera();
+        /**
+         * Open the camera
+         */
+        void open();
 
-    void start();
-    void stop();
+        /**
+         * Close the camera
+         */
+        void close();
 
-    template <typename ParamType, typename ValueType>
-    ValueType getDeviceAttribute(std::string name, ValueType* min = nullptr, ValueType* max = nullptr);
+        /**
+         * Start the image acquisition thread
+         */
+        void acquireImages();
 
-    template <typename ParamType, typename ValueType, typename SetterFunction>
-    void setDeviceAttribute(std::string name, ValueType value, SetterFunction setter) {
-        if (!device_parameters)
-            throw std::runtime_error("Device parameters are not yet initialized.");
+        /**
+         * Stop the image acquisition thread
+         */
+        void interruptThread();
 
-        ParamType* parameter = dynamic_cast<ParamType*>(device->GetParameters()->Get(PvString(name.c_str())));
+        /**
+         * Get access type
+         * @return The access type
+         */
+        PvAccessType getAccessType();
 
-        if (!parameter)
-            throw std::runtime_error("Attribute " + name + " does not exist.");
+    public:
+        // Callback function to notify the user when a new image is available
+        std::function<void(const cv::Mat &image)> callback;
 
-        if (!parameter->IsWritable()) {
-            std::cout << name << " is not writable at the time..." << std::endl;
-            return;
-        }
+        /**
+         * Constructor
+         * @param ip_address The IP address of the camera
+         */
+        PhotonFocusCamera(const std::string& ip_address);
 
-        // Use the provided setter function to set the attribute value
-        (this->*setter)(parameter, value);
-    }
+        /**
+         * Destructor
+         */
+        ~PhotonFocusCamera();
 
-    void setDeviceAttributeBool(std::string name, bool value) {
-        setDeviceAttribute<PvGenBoolean, bool>(name, value, &PhotonFocusCamera::setBooleanAttribute);
-    }
+        /**
+         * Open the camera
+         */
+        void start();
 
-    void setDeviceAttributeLong(std::string name, long value) {
-        setDeviceAttribute<PvGenInteger, long>(name, value, &PhotonFocusCamera::setIntegerAttribute);
-    }
+        /**
+         * Close the camera
+         */
+        void stop();
 
-    void setDeviceAttributeString(std::string name, std::string value) {
-        setDeviceAttribute<PvGenEnum, std::string>(name, value, &PhotonFocusCamera::setStringAttribute);
-    }
+        /**
+         * Get device attribute
+         * @param name The name of the attribute
+         * @param min Pointer to the minimum value
+         * @param max Pointer to the maximum value
+         * @return The value of the attribute
+         */
+        template <typename ParamType, typename ValueType>
+        ValueType getDeviceAttribute(std::string name, ValueType* min = nullptr, ValueType* max = nullptr);
 
-    void setDeviceAttributeDouble(std::string name, double value) {
-        setDeviceAttribute<PvGenFloat, double>(name, value, &PhotonFocusCamera::setDoubleAttribute);
-    }
+        /**
+         * Set device attribute
+         * @param name The name of the attribute
+         * @param value The value of the attribute
+         * @param setter The setter function
+         */
+        template <typename ParamType, typename ValueType, typename SetterFunction>
+        void setDeviceAttribute(std::string name, ValueType value, SetterFunction setter);
 
-private:
-    void setBooleanAttribute(PvGenBoolean* parameter, bool value) {
-        CHECK_RESULT(parameter->SetValue(value));
-    }
+        /**
+         * Set device attribute for boolean
+         * @param name The name of the attribute
+         * @param value The value of the attribute
+         */
+        void setDeviceAttributeBool(std::string name, bool value);
 
-    void setIntegerAttribute(PvGenInteger* parameter, long value) {
-        CHECK_RESULT(parameter->SetValue(value));
-    }
+        /**
+         * Set device attribute for long
+         * @param name The name of the attribute
+         * @param value The value of the attribute
+         */
+        void setDeviceAttributeLong(std::string name, long value);
 
-    void setStringAttribute(PvGenEnum* parameter, std::string value) {
-        // Check if the value is in the range
-        long entries;
-        bool is_in = false;
-        CHECK_RESULT(parameter->GetEntriesCount(entries));
-        for (int i = 0; i < entries && !is_in; i++) {
-            const PvGenEnumEntry* entry;
-            CHECK_RESULT(parameter->GetEntryByIndex(i, &entry));
-            PvString current_value;
-            CHECK_RESULT(entry->GetName(current_value));
-            if (value == std::string(current_value.GetAscii()))
-                is_in = true;
-        }
+        /**
+         * Set device attribute for string
+         * @param name The name of the attribute
+         * @param value The value of the attribute
+         */
+        void setDeviceAttributeString(std::string name, std::string value);
 
-        if (!is_in) {
-            return;
-        }
-        CHECK_RESULT(parameter->SetValue(PvString(value.c_str())));
-    }
+        /**
+         * Set device attribute for double
+         * @param name The name of the attribute
+         * @param value The value of the attribute
+         */
+        void setDeviceAttributeDouble(std::string name, double value);
 
-    void setDoubleAttribute(PvGenFloat* parameter, double value) {
-        CHECK_RESULT(parameter->SetValue(value));
-    }
+    private:
+        /**
+         * Set device attribute for boolean
+         * @param parameter The parameter
+         * @param value The value of the attribute
+         */
+        void setBooleanAttribute(PvGenBoolean* parameter, bool value);
 
-private:
-    std::atomic<bool> stop_thread { false };
-    std::mutex mtx;
+        /**
+         * Set device attribute for long
+         * @param parameter The parameter
+         * @param value The value of the attribute
+         */
+        void setIntegerAttribute(PvGenInteger* parameter, long value);
 
-    void open();
-    void close();
-    void acquireImages();
-    void interruptThread();
+        /**
+         * Set device attribute for string
+         * @param parameter The parameter
+         * @param value The value of the attribute
+         */
+        void setStringAttribute(PvGenEnum* parameter, std::string value);
 
-    PvAccessType getAccessType();
-};
+        /**
+         * Set device attribute for double
+         * @param parameter The parameter
+         * @param value The value of the attribute
+         */
+        void setDoubleAttribute(PvGenFloat* parameter, double value);
+    };
 
 }
-#endif // PHOTONFOCUS_CAMERA_H
+#endif // PHOTONFOCUS_CAMERA_HPP

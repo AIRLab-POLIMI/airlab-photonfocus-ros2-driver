@@ -1,3 +1,12 @@
+# =====================================================================================================================
+# File: photonfocus_camera.yaml
+# Author: Mirko Usuelli (Ph.D. Candidate, Politecnico di Milano @ AIRLab)
+# Email: mirko.usuell@polimi.it
+# Description: This file contains the CMakelists.txt for the photonfocus_camera package.
+# ---------------------------------------------------------------------------------------------------------------------
+# Created on: 05/02/2024
+# Last Modified: 12/02/2024
+# =====================================================================================================================
 cmake_minimum_required(VERSION 3.5)
 project(airlab-photonfocus-ros2-wrapper)
 
