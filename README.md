@@ -21,10 +21,10 @@
 Open a terminal and follow the standard procedure for ROS 2 packages:
 ```
 source opt/ros/foxy/setup.bash
-cd ros2_ws/src && git clone https://github.com/AIRLab-POLIMI/airlab-photonfocus-ros2-wrapper
+cd ros2_ws/src && git clone https://github.com/AIRLab-POLIMI/airlab-photonfocus-ros2-driver.git
 cd .. && colcon build
 source install/setup.bash
-ros2 launch airlab-photonfocus-ros2-wrapper nir_launch.py
+ros2 launch airlab-photonfocus-ros2-driver nir_launch.py
 ```
 
 ### Notes
