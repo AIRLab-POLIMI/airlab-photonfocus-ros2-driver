@@ -37,3 +37,7 @@ We extend our heartfelt gratitude to Alberto Invernizzi and the team at IRA Lab,
 
 ## Authors
 - Mirko Usuelli, PhD Candidate @ AIRLab, Politecnico di Milano [link](https://www.linkedin.com/in/mirko-usuelli-64992b155/)
+
+## Laboratory
+- [LinkedIn](https://it.linkedin.com/company/airlab-polimi)
+- [Instagram](https://www.instagram.com/airlab_polimi/)
