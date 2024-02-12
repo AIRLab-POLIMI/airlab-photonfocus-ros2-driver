@@ -19,11 +19,13 @@
 
 ## Usage
 Open a terminal and follow the standard procedure for ROS 2 packages:
-1. `source opt/ros/foxy/setup.bash`
-2. `cd ros2_ws/src && git clone https://github.com/AIRLab-POLIMI/airlab-photonfocus-ros2-wrapper`
-3. `cd .. && colcon build`
-4. `source install/setup.bash`
-5. `ros2 launch airlab-photonfocus-ros2-wrapper nir_launch.py`
+```
+source opt/ros/foxy/setup.bash
+cd ros2_ws/src && git clone https://github.com/AIRLab-POLIMI/airlab-photonfocus-ros2-wrapper
+cd .. && colcon build
+source install/setup.bash
+ros2 launch airlab-photonfocus-ros2-wrapper nir_launch.py
+```
 
 ### Notes
 - Requirements can be easily re-adapted also to NVIDIA Jetson Orin ® with Jetpack SDK 6.0 on Ubuntu 22.04, although **never** tested.
