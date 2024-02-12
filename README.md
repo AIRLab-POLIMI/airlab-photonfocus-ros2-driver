@@ -18,10 +18,12 @@
    + **PhotonFocus NIR** MV1-D2048x1088-HS02-96-G2-10; Max resolution: 2048 x 1088; [link](https://www.photonfocus.com/products/camerafinder/camera/mv1-d2048x1088-96-g2/)
 
 ## Usage
-1. Clone this repository inside a ROS 2 workspace:
-2. `git clone `
-3. `colcon build`
-4. `ros2 launch airlab-photonfocus-ros2-wrapper nir_launch.py`
+Open a terminal and follow the standard procedure for ROS 2 packages:
+1. `source opt/ros/foxy/setup.bash`
+2. `cd ros2_ws/src && git clone https://github.com/AIRLab-POLIMI/airlab-photonfocus-ros2-wrapper`
+3. `cd .. && colcon build`
+4. `source install/setup.bash`
+5. `ros2 launch airlab-photonfocus-ros2-wrapper nir_launch.py`
 
 ### Notes
 - Requirements can be easily re-adapted also to NVIDIA Jetson Orin ® with Jetpack SDK 6.0 on Ubuntu 22.04, although **never** tested.
