@@ -9,13 +9,13 @@
 </div>
 
 ## Requirements
-1. NVIDIA Jetson Xavier ® with Jetpack SDK 5.1 on Ubuntu 20.04 [link](https://developer.nvidia.com/embedded/jetpack-sdk-51)
-2. ROS 2 Foxy [link](https://docs.ros.org/en/foxy/Installation.html)
-3. OpenCV [link](https://opencv.org/)
-4. eBUS SDK 6.3.1 ® for ARM-based architectures [link](https://www.jai.com/uploads/documents/Software/SDK-eBUS/Ubuntu-Jetson/eBUS_SDK_JAI_Jetson_5.1_linux-aarch64-arm-6.3.1-6545.zip)
+1. NVIDIA Jetson Xavier ® with Jetpack SDK 5.1 on Ubuntu 20.04 [[link](https://developer.nvidia.com/embedded/jetpack-sdk-51)]
+2. ROS 2 Foxy [[link](https://docs.ros.org/en/foxy/Installation.html)]
+3. OpenCV [[link](https://opencv.org/)]
+4. eBUS SDK 6.3.1 ® for ARM-based architectures [[link](https://www.jai.com/uploads/documents/Software/SDK-eBUS/Ubuntu-Jetson/eBUS_SDK_JAI_Jetson_5.1_linux-aarch64-arm-6.3.1-6545.zip)]
 5. PhotonFocus ® hyper-spectral cameras: 
-   + **PhotonFocus VIS** MV1-D2048x1088-HS03-96-G2-10; Max resolution: 2048 x 1088; [link](https://www.photonfocus.com/products/camerafinder/camera/mv1-d2048x1088-96-g2/)
-   + **PhotonFocus NIR** MV1-D2048x1088-HS02-96-G2-10; Max resolution: 2048 x 1088; [link](https://www.photonfocus.com/products/camerafinder/camera/mv1-d2048x1088-96-g2/)
+   + **PhotonFocus VIS** MV1-D2048x1088-HS03-96-G2-10; Max resolution: 2048 x 1088; [[link](https://www.photonfocus.com/products/camerafinder/camera/mv1-d2048x1088-96-g2/)]
+   + **PhotonFocus NIR** MV1-D2048x1088-HS02-96-G2-10; Max resolution: 2048 x 1088; [[link](https://www.photonfocus.com/products/camerafinder/camera/mv1-d2048x1088-96-g2/)]
 
 ## Usage
 Open a terminal and follow the standard procedure for ROS 2 packages:
@@ -33,11 +33,11 @@ ros2 launch airlab-photonfocus-ros2-driver nir_launch.py
 
 ## Acknowledgements
 The Artificial Intelligence and Robotics Laboratory (AIRLab) @ Politecnico di Milano, provided support for this work. 
-We extend our heartfelt gratitude to Alberto Invernizzi and the team at IRA Lab, Bicocca University of Milan, for their contribution in making their driver in ROS 1 open source. [link](https://github.com/iralabdisco/ira_photonfocus_driver)
+We extend our heartfelt gratitude to Alberto Invernizzi and the team at IRA Lab, Bicocca University of Milan, for their contribution in making their driver in ROS 1 open source. [[ROS 1 Driver](https://github.com/iralabdisco/ira_photonfocus_driver)]
 
 ## Authors
-- Mirko Usuelli, PhD Candidate @ AIRLab, Politecnico di Milano [link](https://www.linkedin.com/in/mirko-usuelli-64992b155/)
+- Mirko Usuelli, PhD Candidate @ AIRLab, Politecnico di Milano [[LinkedIn](https://www.linkedin.com/in/mirko-usuelli-64992b155/)][[GitHub](https://github.com/mirkousuelli)]
 
 ## Laboratory
-- [LinkedIn](https://it.linkedin.com/company/airlab-polimi)
-- [Instagram](https://www.instagram.com/airlab_polimi/)
+- [LinkedIn](https://it.linkedin.com/company/airlab-polimi) : Academic news
+- [Instagram](https://www.instagram.com/airlab_polimi/) : Student news
