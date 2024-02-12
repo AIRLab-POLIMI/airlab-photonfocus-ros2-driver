@@ -20,7 +20,7 @@ def generate_launch_description():
         # NIR camera
         Node(
             package='airlab-photonfocus-ros2-wrapper',
-            executable='image_publisher_node',
+            executable='photonfocus_camera_node',
             name='nir_photonfocus',
             namespace='nir',
             parameters=[
@@ -33,7 +33,7 @@ def generate_launch_description():
         # VIS camera
         Node(
             package='airlab-photonfocus-ros2-wrapper',
-            executable='image_publisher_node',
+            executable='photonfocus_camera_node',
             name='vis_photonfocus',
             namespace='vis',
             parameters=[

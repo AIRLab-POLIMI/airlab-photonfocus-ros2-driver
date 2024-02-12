@@ -20,9 +20,8 @@ if(NOT CMAKE_CXX_STANDARD)
   set(CMAKE_CXX_STANDARD 17)
 endif()
 
-if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wall -Wextra -Wpedantic)
-endif()
+# Warnings
+add_compile_options(-Wall -Wextra -Wpedantic -Wno-terminate -W)
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
@@ -33,9 +32,10 @@ find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(yaml_cpp_vendor REQUIRED)
 
-# -------------------------------------------------------------------------------------------
+# External cmake
 include(cmake/FindEbus-sdk.cmake)
 
+# Library
 add_library(
   airlab_photonfocus include/photonfocus_camera.hpp src/photonfocus_camera.cpp
 )
@@ -60,38 +60,32 @@ target_include_directories(airlab_photonfocus PUBLIC
   ${yaml_cpp_vendor_INCLUDE_DIRS}
 )
 
-# create executable
-#add_executable(camera_test test/camera_test.cpp)
-
-# link libraries to the executable
-#target_link_libraries(camera_test airlab_photonfocus)
-
-# -------------------------------------------------------------------------------------------
-
+# Test ROS 2
 if(BUILD_TESTING)
   find_package(ament_lint_auto REQUIRED)
   ament_lint_auto_find_test_dependencies()
 endif()
 
-# -------------------------------------------------------------------------------------------
-
+# ROS 2
 ament_target_dependencies(airlab_photonfocus
   rclcpp sensor_msgs yaml_cpp_vendor
 )
 
 # Add executable
-add_executable(image_publisher_node src/photonfocus_camera_node.cpp)
-target_link_libraries(image_publisher_node airlab_photonfocus)
+add_executable(photonfocus_camera_node src/photonfocus_camera_node.cpp)
+target_link_libraries(photonfocus_camera_node airlab_photonfocus)
 
 
 # Install
 install(TARGETS
-    image_publisher_node
+    photonfocus_camera_node
     DESTINATION lib/${PROJECT_NAME}
 )
 
+# Launch
 install(DIRECTORY launch
   DESTINATION share/${PROJECT_NAME}/
 )
 
+# ROS 2
 ament_package()

@@ -17,7 +17,7 @@ def generate_launch_description():
     return LaunchDescription([
         Node(
             package='airlab-photonfocus-ros2-wrapper',
-            executable='image_publisher_node',
+            executable='photonfocus_camera_node',
             name='nir_photonfocus',
             namespace='nir',
             parameters=[
