@@ -9,8 +9,8 @@
 </div>
 
 ## Requirements
-1. NVIDIA Jetson Xavier ® with Jetpack SDK 5.1 on Ubuntu 20.04
-2. ROS 2 Foxy
+1. NVIDIA Jetson Xavier ® with Jetpack SDK 5.1 on Ubuntu 20.04 [link](https://developer.nvidia.com/embedded/jetpack-sdk-51)
+2. ROS 2 Foxy [link](https://docs.ros.org/en/foxy/Installation.html)
 3. eBUS SDK 6.3.1 ® for ARM-based architectures [link](https://www.jai.com/uploads/documents/Software/SDK-eBUS/Ubuntu-Jetson/eBUS_SDK_JAI_Jetson_5.1_linux-aarch64-arm-6.3.1-6545.zip)
 4. PhotonFocus ® hyper-spectral cameras: 
    + **PhotonFocus VIS** MV1-D2048x1088-HS03-96-G2-10; Max resolution: 2048 x 1088; [link](https://www.photonfocus.com/products/camerafinder/camera/mv1-d2048x1088-96-g2/)
