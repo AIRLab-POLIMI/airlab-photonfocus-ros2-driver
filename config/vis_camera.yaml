@@ -8,6 +8,7 @@
 # Last Modified: 12/02/2024
 # =====================================================================================================================
 photonfocus_camera:
+  type: "VIS"  # camera type
   width: 2048  # Width of the image in pixels
   height: 1088  # Height of the image in pixels
   offset_x: 0  # Offset of the image in the x-axis
@@ -16,3 +17,4 @@ photonfocus_camera:
   acquisition_frame_rate_enable: True  # Enable the acquisition frame rate
   acquisition_frame_rate: 15  # Acquisition frame rate in Hz
   pixel_format: "MONO8"  # Pixel format of the image
+  histogram: true  # Image histogram

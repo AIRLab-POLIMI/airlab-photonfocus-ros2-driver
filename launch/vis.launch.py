@@ -21,7 +21,7 @@ def generate_launch_description():
             name='vis_photonfocus',
             namespace='vis',
             parameters=[
-                {'topic': '/vis_image_raw',
+                {'topic': '/vis',
                  'frame_id': 'vis_camera_link',
                  'ip_address': '10.79.2.78',
                  'config_file_path': '/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-driver/config/vis_camera.yaml'}

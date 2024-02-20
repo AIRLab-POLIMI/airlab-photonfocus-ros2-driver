@@ -39,11 +39,15 @@ namespace AIRLab {
     class PhotonFocusDriver : public rclcpp::Node {
     private:
         std::unique_ptr<AIRLab::PhotonFocusCamera> camera_;  // PhotonFocus camera object
-        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr publisher_;  // ROS 2 publisher
+        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_publisher_;  // raw image publisher
+        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr hist_publisher_;  // histogram publisher
         std::string frame_id_;  // ROS 2 frame ID
-        std::string topic_;  // ROS 2 topic
+        std::string image_topic_;  // ROS 2 topic
+        std::string hist_topic_;  // ROS 2 topic
         std::string ip_address_;  // PhotonFocus camera IP address
         std::string config_file_;  // YAML file path
+        std::string tag_;  // camera type tag
+        bool histagram_enabled_;  // whether histogram is enabled
 
     public:
         /**
@@ -52,26 +56,28 @@ namespace AIRLab {
          */
         PhotonFocusDriver() : Node("airlab_photonfocus") {
             // Declare parameters
-            this->declare_parameter<std::string>("topic", "/vis_image_raw");
+            this->declare_parameter<std::string>("topic", "/vis");
             this->declare_parameter<std::string>("frame_id", "vis_camera_link");
             this->declare_parameter<std::string>("ip_address", "10.79.2.78");
             this->declare_parameter<std::string>("config_file_path",
                 "/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-driver/config/default_camera.yaml");
 
             // Get parameter values
-            topic_ = this->get_parameter("topic").as_string();
+            image_topic_ = this->get_parameter("topic").as_string() + "_image_raw";
+            hist_topic_ = this->get_parameter("topic").as_string() + "_histogram";
             frame_id_ = this->get_parameter("frame_id").as_string();
             ip_address_ = this->get_parameter("ip_address").as_string();
             config_file_ = this->get_parameter("config_file_path").as_string();
 
             // Use the parameter values as needed
-            RCLCPP_INFO(this->get_logger(), "Topic: %s", topic_.c_str());
+            RCLCPP_INFO(this->get_logger(), "Topic: %s", image_topic_.c_str());
             RCLCPP_INFO(this->get_logger(), "Frame ID: %s", frame_id_.c_str());
             RCLCPP_INFO(this->get_logger(), "IP Address: %s", ip_address_.c_str());
             RCLCPP_INFO(this->get_logger(), "Config File Path: %s", config_file_.c_str());
 
-            // Publisher
-            publisher_ = this->create_publisher<sensor_msgs::msg::Image>(topic_, 10);
+            // Publishers
+            image_publisher_ = this->create_publisher<sensor_msgs::msg::Image>(image_topic_, 10);
+            hist_publisher_ = this->create_publisher<sensor_msgs::msg::Image>(hist_topic_, 10);
 
             // Initialize camera
             camera_ = std::make_unique<AIRLab::PhotonFocusCamera>(ip_address_);
@@ -93,6 +99,7 @@ namespace AIRLab {
                 }
 
                 // Define device attributes
+                tag_ = cameraNode["type"].as<std::string>();
                 long width = cameraNode["width"].as<int>();
                 long height = cameraNode["height"].as<int>();
                 long offset_x = cameraNode["offset_x"].as<int>();
@@ -100,6 +107,7 @@ namespace AIRLab {
                 double exposure_time = cameraNode["exposure_time"].as<double>();
                 bool acquisition_frame_rate_enable = cameraNode["acquisition_frame_rate_enable"].as<bool>();
                 double acquisition_frame_rate = cameraNode["acquisition_frame_rate"].as<double>();
+                histagram_enabled_ = cameraNode["histogram"].as<bool>();
 
                 // Set device attributes
                 camera_->setDeviceAttributeLong("Width", width);
@@ -111,7 +119,7 @@ namespace AIRLab {
                 if (acquisition_frame_rate_enable)
                     camera_->setDeviceAttributeDouble("AcquisitionFrameRate", acquisition_frame_rate);
 
-                RCLCPP_INFO(this->get_logger(), "===== PhotonFocus Camera STARTED =====");
+                RCLCPP_INFO(this->get_logger(), "===== PhotonFocus " + tag_ + " Camera STARTED =====");
             } catch (const YAML::Exception& e) {
                 RCLCPP_ERROR(this->get_logger(), "Error parsing YAML file: %s", e.what());
             } catch (const std::exception& e) {
@@ -126,7 +134,7 @@ namespace AIRLab {
         ~PhotonFocusDriver() {
             camera_->stop();
             camera_.reset();
-            RCLCPP_INFO(this->get_logger(), "===== PhotonFocus Camera STOPPED =====");
+            RCLCPP_INFO(this->get_logger(), "===== PhotonFocus " + tag_ + " Camera STOPPED =====");
         }
 
     private:
@@ -145,7 +153,49 @@ namespace AIRLab {
             image_.header.frame_id = frame_id_;
 
             // Publish image
-            publisher_->publish(image_);
+            image_publisher_->publish(image_);
+
+            if (histagram_enabled_)
+                this->publishHistogram(img);
+        }
+
+        void publishHistogram(const cv::Mat& img) {
+            // Compute the histogram
+            int histSize = 256;
+            float range[] = { 0, 256 };
+            const float* histRange = { range };
+            cv::Mat hist;
+
+            cv::calcHist(&img, 1, 0, cv::Mat(), hist, 1, &histSize, &histRange);
+
+            // Draw the histogram
+            int hist_w = 512, hist_h = 400;
+            int bin_w = cvRound((double)hist_w / histSize);
+
+            cv::Mat histImage(hist_h, hist_w, CV_8UC3, cv::Scalar(0, 0, 0));
+
+            // Normalize the histogram
+            cv::normalize(hist, hist, 0, histImage.rows, cv::NORM_MINMAX, -1, cv::Mat());
+
+            // Draw the histogram
+            for (int i = 1; i < histSize; i++) {
+                cv::line(histImage, cv::Point(bin_w * (i - 1), hist_h - cvRound(hist.at<float>(i - 1))),
+                    cv::Point(bin_w * (i), hist_h - cvRound(hist.at<float>(i))),
+                    cv::Scalar(255, 255, 255), 2, 8, 0);
+            }
+            cv::Mat grayImage;
+            cv::cvtColor(histImage, grayImage, cv::COLOR_BGR2GRAY);
+
+            // Convert image to ROS 2 message
+            cv_bridge::CvImage cv_image;
+            cv_image.encoding = "mono8";
+            cv_image.image = grayImage;
+            cv_image.header.stamp = this->now();
+            sensor_msgs::msg::Image image_ = *cv_image.toImageMsg();
+            image_.header.frame_id = frame_id_;
+
+            // Publish image
+            hist_publisher_->publish(image_);
         }
     };
 }

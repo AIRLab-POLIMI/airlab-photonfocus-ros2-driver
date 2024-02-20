@@ -21,7 +21,7 @@ def generate_launch_description():
             name='nir_photonfocus',
             namespace='nir',
             parameters=[
-                {'topic': '/nir_image_raw',
+                {'topic': '/nir',
                  'frame_id': 'nir_camera_link',
                  'ip_address': '10.79.2.145',
                  'config_file_path': '/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-driver/config/nir_camera.yaml'}
