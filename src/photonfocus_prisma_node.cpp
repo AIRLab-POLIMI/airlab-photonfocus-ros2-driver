@@ -60,9 +60,9 @@ namespace AIRLab {
         const int NIR_H_LIMIT = HEIGHT - NIR_MOSAIC_SIZE;
 
         // spectral bands in nm
-        const int VIS_BANDS_ = [ 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 610, 620 ];
-        const int NIR_BANDS_ = [ 600, 615, 630, 645, 660, 675, 700, 715, 730, 745, 760, 775, 790, 805, 820, 835, 850, 875, 890, 900, 915, 930, 945, 960, 975 ];
-
+        const std::vector<int> VIS_BANDS_ = { 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 610, 620 };
+        const std::vector<int> NIR_BANDS_ = { 600, 615, 630, 645, 660, 675, 700, 715, 730, 745, 760, 775, 790, 805, 820, 835, 850, 875, 890, 900, 915, 930, 945, 960, 975 };
+    
     private:
         // topics
         std::string vis_topic_;
@@ -81,8 +81,8 @@ namespace AIRLab {
         std::map<int, rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr> nir_pubs_;
 
         // images
-        std::map<int, cv::Mat>::SharedPtr> vis_imgs_;
-        std::map<int, cv::Mat>::SharedPtr> nir_imgs_;
+        std::map<int, cv::Mat> vis_imgs_;
+        std::map<int, cv::Mat> nir_imgs_;
 
     public:
         /**
@@ -107,7 +107,7 @@ namespace AIRLab {
                 10,  // The queue size
                 std::bind(&PhotonFocusPrisma::nir_callback, this, std::placeholders::_1)  // The callback function
             );
-
+            
             // pubs and imgs
             for (const auto & band : VIS_BANDS_) {
                 vis_pubs_[band] = this->create_publisher<sensor_msgs::msg::Image>("/vis_" + std::to_string(band) + "_nm", 10);
@@ -119,19 +119,13 @@ namespace AIRLab {
             }
         }
 
-        /**
-         * @brief Destructor
-         * @details The destructor stops the prisma.
-         */
-        ~PhotonFocusPrisma() = default;
-
     private:
         /**
          * @brief Publish VIS images
          * @details This function subscribes to the VIS mosaic image and decompose it in their bands.
          * @param img Image to be decomposed.
          */
-        void vis_callback(const sensor_msgs::msg::Image::SharedPtr& msg) {
+        void vis_callback(sensor_msgs::msg::Image::SharedPtr msg) {
             // Convert the sensor_msgs::Image to cv::Mat
             cv_bridge::CvImagePtr cv_ptr;
             try {
@@ -172,7 +166,7 @@ namespace AIRLab {
          * @details This function subscribes to the NIR mosaic image and decompose it in their bands
          * @param img Image to be decomposed.
          */
-        void nir_callback(const sensor_msgs::msg::Image::SharedPtr& msg) {
+        void nir_callback(sensor_msgs::msg::Image::SharedPtr msg) {
             // Convert the sensor_msgs::Image to cv::Mat
             cv_bridge::CvImagePtr cv_ptr;
             try {

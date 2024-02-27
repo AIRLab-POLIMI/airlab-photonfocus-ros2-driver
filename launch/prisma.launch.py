@@ -21,9 +21,9 @@ def generate_launch_description():
             name='prisma_photonfocus',
             namespace='prisma',
             parameters=[
-                {'vis_topic': '/vis_raw_image',
+                {'vis_topic': '/vis_image_raw',
                  'vis_frame_id': 'vis_camera_link',
-                 'nir_topic': '/nir_raw_image',
+                 'nir_topic': '/nir_image_raw',
                  'nir_frame_id': 'vis_camera_link',}
             ]
         )

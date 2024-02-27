@@ -76,9 +76,13 @@ ament_target_dependencies(airlab_photonfocus
 add_executable(photonfocus_camera_node src/photonfocus_camera_node.cpp)
 target_link_libraries(photonfocus_camera_node airlab_photonfocus)
 
+add_executable(photonfocus_prisma_node src/photonfocus_prisma_node.cpp)
+target_link_libraries(photonfocus_prisma_node airlab_photonfocus)
+
 # Install
 install(TARGETS
     photonfocus_camera_node
+    photonfocus_prisma_node
     DESTINATION lib/${PROJECT_NAME}
 )
 
