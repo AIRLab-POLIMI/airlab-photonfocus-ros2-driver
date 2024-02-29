@@ -96,6 +96,10 @@ The following bands in nm are decomposed:
 - **VIS**: `470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 610, 620`
 - **NIR**: `600, 615, 630, 645, 660, 675, 700, 715, 730, 745, 760, 775, 790, 805, 820, 835, 850, 865, 880, 895, 910, 925, 940, 955, 970, 975`
 
+<div align="center">
+<img src="img/light.jpg" width="600">
+</div>
+
 ### Notes
 - Requirements can be easily re-adapted also to NVIDIA Jetson Orin ® with Jetpack SDK 6.0 on Ubuntu 22.04, although **never** tested.
 - Requirements can be easily re-adapted also for other PhotonFocus cameras based on the eBUS SDK standard GigE (or even US3).
