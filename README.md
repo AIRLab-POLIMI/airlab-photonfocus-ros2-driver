@@ -90,7 +90,10 @@ The encoding pattern mechanism is based on the CMOSIS CMV2000 sensor, which is a
 - **CMV2K-SM4x4-VIS**: exhibits a mosaic configuration of the same format array of Fabry-Perot filters. In this configuration, a block of 4 x 4 detector pixels is integrated with 4x4 different Fabry-Perot filters on.
 
 An example of the first encoding is depicted in the following image:
-![](img/pattern.png)
+
+<div align="center">
+<img src="img/pattern.png" width="700">
+</div>
 
 The following bands in nm are decomposed:
 - **VIS**: `470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 610, 620`
