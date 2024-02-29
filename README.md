@@ -97,7 +97,7 @@ The following bands in nm are decomposed:
 - **NIR**: `600, 615, 630, 645, 660, 675, 700, 715, 730, 745, 760, 775, 790, 805, 820, 835, 850, 865, 880, 895, 910, 925, 940, 955, 970, 975`
 
 <div align="center">
-<img src="img/light.jpg" width="600">
+<img src="img/light.jpg" width="800">
 </div>
 
 ### Notes
