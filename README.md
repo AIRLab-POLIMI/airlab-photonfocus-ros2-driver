@@ -49,18 +49,33 @@ Take the Calibration Board, named "*Diffuse Reflectance Standard Calibration Tar
 
 Then, call the service to set the exposure time automatically:
 ```
-ros2 service call /auto_exposure std_srvs/srv/Empty {}
+# Average wavelength of the reflectance standard target package for the VIS camera
+ros2 service call /vis/auto_exposure airlab_photonfocus_ros2_driver/srv/AutoExposure "{wavelength: 0}"
+
+# Average wavelength of the reflectance standard target package for the NIR camera
+ros2 service call /nir/auto_exposure airlab_photonfocus_ros2_driver/srv/AutoExposure "{wavelength: 0}"
+```
+
+Otherwise, you can set the exposure time according to the desired wavelength:
+```
+# Set the exposure time for the VIS camera at 550 nm
+ros2 service call /vis/auto_exposure airlab_photonfocus_ros2_driver/srv/AutoExposure "{wavelength: 550}"
+
+# Set the exposure time for the NIR camera at 700 nm
+ros2 service call /nir/auto_exposure airlab_photonfocus_ros2_driver/srv/AutoExposure "{wavelength: 700}"
 ```
 
 The ros2 service will return and set the optimized exposure time, based on the declared reflectance standard target package:
 ![](img/reflectance.png)
 
-- *White*: 87% reflectance (220 in RGB scale)
-- *Light Grey*: 27% reflectance (69 in RGB scale)
-- *Dark Grey*: 22% reflectance (56 in RGB scale)
-- *Black*: 3% reflectance (8 in RGB scale)
+- **White**: 83% diffuse reflectance;
+- **Light Grey**: 27% diffuse reflectance;
+- **Dark Grey**: 22% diffuse reflectance;
+- **Black**: 2% diffuse reflectance.
 
-Highly recommended to use the reflectance standard target package for the best results. Thus this reference spiky target package is used to set the exposure time automatically by taking the minimum cost as described by the following pseudo-code:
+*NB. Diffuse reflectance is preferred to total reflectance in agricultural applications, as it is more representative of the actual reflectance of the target.*
+
+### Automatic Exposure Time Pseudo-Algorithm
 ```
 # Compute the correlation and chi-square distance
 hist_correl = cv2.compareHist(hist_ref, hist, cv2.HISTCMP_CORREL)
@@ -73,13 +88,19 @@ tot_cost_to_minimize = hist_correl.normalized() + hist_chi_square.normalized()
 best_cost = argmnin(tot_cost_to_minimize)
 ```
 
+The objective function is a combination of the correlation and chi-square distance, which are inner-normalized and summed, since empirical results stated a better robustness. The minimum cost is found, and the corresponding exposure time is returned.
+
+<div align="center">
+<img src="img/cost_function.png" width="400">
+</div>
+
 ### Prisma Post-Processing launch
 ```
 ros2 launch airlab-photonfocus-ros2-driver prisma.launch.py
 ```
 #### Prisma working mechanism based on CMOSIS CMV2000 sensor
-- **VIS camera MV1-D2048x1088-HS03-96-G2**: it implements a multi-spectral area sensor with a 4x4 pixel pattern in the visible range. The spectral range from 470nm to 620nm is covered in 10 nm steps.
-- **NIR camera MV1-D2048x1088-HS02-96-G2**: it implements a multi-spectral area sensor with a 5x5 pixel pattern in the NIR range. The spectral range from 600nm to 975nm is covered in 15.6 nm steps.
+- **VIS camera MV1-D2048x1088-HS03-96-G2**: it implements a multi-spectral area sensor with a 4x4 pixel pattern in the visible range. The spectral range from 470nm to 620nm is covered in 10 nm steps. The results is a collection of 16 simultaneous images 512x272 pixels each.
+- **NIR camera MV1-D2048x1088-HS02-96-G2**: it implements a multi-spectral area sensor with a 5x5 pixel pattern in the NIR range. The spectral range from 600nm to 975nm is covered in 15.6 nm steps. The results is a collection of 25 simultaneous images 409x217 pixels each (a padding of 3 is added to the Y axis to match the VIS camera resolution, from 2048x1088 to 2045x1085).
 
 In order to capture in real-time the spectral information, the Prisma post-processing algorithm is implemented. The Prisma algorithm is based on the encoding mosaic-pattern mechanism as declared:
 
@@ -92,15 +113,24 @@ The encoding pattern mechanism is based on the CMOSIS CMV2000 sensor, which is a
 An example of the first encoding is depicted in the following image:
 
 <div align="center">
-<img src="img/pattern.png" width="700">
+<img src="img/vis_pattern.jpg" width="700">
+</div>
+<div align="center">
+<img src="img/nir_pattern.png" width="700">
 </div>
 
 The following bands in nm are decomposed:
-- **VIS**: `470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 610, 620`
-- **NIR**: `600, 615, 630, 645, 660, 675, 700, 715, 730, 745, 760, 775, 790, 805, 820, 835, 850, 865, 880, 895, 910, 925, 940, 955, 970, 975`
+- **VIS**: `465, 546, 586, 630, 474, 534, 578, 624, 485, 522, 562, 608, 496, 510, 548, 600`
+- **NIR**: `915, 930, 945, 960, 975, 835, 850, 875, 890, 900, 760, 775, 790, 805, 820, 675, 700, 715, 730, 745, 600, 615, 630, 645, 660`
 
 <div align="center">
 <img src="img/light.jpg" width="800">
+</div>
+
+### Results
+VIS prisma decomposition:
+<div align="center">
+<img src="img/result.png" width="800">
 </div>
 
 ### Notes
