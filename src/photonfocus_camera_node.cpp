@@ -32,32 +32,105 @@
 
 // PhotonFocus header
 #include "photonfocus_camera.hpp"
+#include "airlab_photonfocus_ros2_driver/srv/auto_exposure.hpp"
+
+// Macro function to transform light% to grayscal 0-255 by rounded approximation as integer
+#define LIGHT_2_GRAYSCALE(l) ((int)(round(l * 255)))
 
 // AIRLab namespace
 namespace AIRLab {
+
+    /**
+     * In the context of agriculture, diffuse reflectivity is often more beneficial. 
+     * This is because plants use diffuse light more efficiently than direct light. 
+     * Diffuse light penetrates deeper into the canopy and creates a more homogeneous light profile, 
+     * which can lead to a more efficient use of light1.
+     * Moreover, diffuse reflectance spectroscopy has been proposed as a promising method for 
+     * quantifying soil organic carbon © and nitrogen (N) stocks, which are crucial for developing 
+     * land management strategies to mitigate climate change and sustain food production
+     */
+    typedef struct sc {
+        float black;
+        float dark_gray;
+        float light_gray;
+        float white;
+    } spectral_calib_t;
+
+    /**
+     * Bands of interest:
+     * - VIS: 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 610, 620
+     * - NIR: 600, 615, 630, 645, 660, 675, 700, 715, 730, 745, 760, 775, 790, 805, 820, 835, 850, 865, 880, 895, 910, 925, 940, 955, 960, 975
+     * Target calibration values are taken at: 
+     * - https://www.mapir.camera/en-gb/collections/calibration-target-v2/products/diffuse-reflectance-standard-calibration-target-package-v2
+     */
+    const std::map<int, spectral_calib_t> MAP_CALIB = {  // sorted as black, dark_gray, light_gray, white
+        {0, {0.0200, 0.21000, 0.27000, 0.83000 }},  // default avg calibration target
+        {470, { 0.1999, 0.18442, 0.25163, 0.81391 }},
+        {480, { 0.1992, 0.18530, 0.25377, 0.82363 }},
+        {490, { 0.1993, 0.18600, 0.25534, 0.83391 }},
+        {500, { 0.1987, 0.18700, 0.25736, 0.84161 }},
+        {510, { 0.1978, 0.18816, 0.25851, 0.84865 }},
+        {520, { 0.1979, 0.18948, 0.26031, 0.85430 }},
+        {530, { 0.1974, 0.19081, 0.26080, 0.85843 }},
+        {540, { 0.1974, 0.19189, 0.26197, 0.86233 }},
+        {550, { 0.1973, 0.19304, 0.26258, 0.86459 }},
+        {560, { 0.1963, 0.19376, 0.26304, 0.86643 }},
+        {570, { 0.1963, 0.19440, 0.26329, 0.86782 }},
+        {580, { 0.1950, 0.19533, 0.26366, 0.86816 }},
+        {590, { 0.1947, 0.19588, 0.26381, 0.86937 }},
+        {600, { 0.1943, 0.19587, 0.26395, 0.87003 }},
+        {610, { 0.1941, 0.19433, 0.26370, 0.86938 }},
+        {615, { 0.1941, 0.19524, 0.26349, 0.86969 }},
+        {620, { 0.1946, 0.19649, 0.26353, 0.86963 }},
+        {630, { 0.1945, 0.19822, 0.26312, 0.86980 }},
+        {645, { 0.1936, 0.19837, 0.26316, 0.87156 }},
+        {660, { 0.1934, 0.19827, 0.26232, 0.87205 }},
+        {675, { 0.1937, 0.18130, 0.26074, 0.87212 }},
+        {700, { 0.1949, 0.20486, 0.26201, 0.87256 }},
+        {715, { 0.1951, 0.20995, 0.26304, 0.87116 }},
+        {730, { 0.1956, 0.21288, 0.26274, 0.86999 }},
+        {745, { 0.1961, 0.21560, 0.26175, 0.86955 }},
+        {760, { 0.1979, 0.21709, 0.26318, 0.86760 }},
+        {775, { 0.1978, 0.21921, 0.26735, 0.86759 }},
+        {790, { 0.1971, 0.22037, 0.27151, 0.86457 }},
+        {805, { 0.2095, 0.22090, 0.26962, 0.86360 }},
+        {820, { 0.2338, 0.22641, 0.27786, 0.86652 }},
+        {835, { 0.2257, 0.22866, 0.27645, 0.86266 }},
+        {850, { 0.1938, 0.22934, 0.27620, 0.86198 }},
+        {865, { 0.2241, 0.23219, 0.27746, 0.85682 }},
+        {880, { 0.2087, 0.23294, 0.27832, 0.85245 }},
+        {895, { 0.2077, 0.23354, 0.28017, 0.84744 }},
+        {910, { 0.2076, 0.23537, 0.28119, 0.84452 }},
+        {925, { 0.2013, 0.23697, 0.28181, 0.84577 }},
+        {940, { 0.2033, 0.23897, 0.28311, 0.84844 }},
+        {955, { 0.2044, 0.24063, 0.28458, 0.84975 }},
+        {960, { 0.2081, 0.24159, 0.28531, 0.84931 }},
+        {975, { 0.2031, 0.24252, 0.28587, 0.84728 }}
+    };
+
     /**
      * @brief PhotonFocusDriver class
      * This class is a ROS 2 node that interfaces with the PhotonFocus camera.
      */
     class PhotonFocusDriver : public rclcpp::Node {
     private:
-        std::unique_ptr<AIRLab::PhotonFocusCamera> camera_;  // PhotonFocus camera object
-        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_publisher_;  // raw image publisher
-        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr hist_publisher_;  // histogram publisher
-        std::string frame_id_;  // ROS 2 frame ID
-        std::string image_topic_;  // ROS 2 topic
-        std::string hist_topic_;  // ROS 2 topic
-        std::string ip_address_;  // PhotonFocus camera IP address
-        std::string config_file_;  // YAML file path
-        std::string tag_;  // camera type tag
-        cv::Mat hist;  // last histogram
-        rclcpp::Time last_time_;  // last time
-        bool histagram_enabled_;  // whether histogram is enabled
-        rclcpp::Service<std_srvs::srv::Empty>::SharedPtr exposure_service_;
-        std::condition_variable cv;
-        std::mutex mtx;
-        int width;
-        int height;
+        std::unique_ptr<AIRLab::PhotonFocusCamera> camera_;                                                 // PhotonFocus camera object
+        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr image_publisher_;                             // raw image publisher
+        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr hist_publisher_;                              // histogram publisher
+        std::string frame_id_;                                                                              // ROS 2 frame ID
+        std::string image_topic_;                                                                           // ROS 2 topic
+        std::string hist_topic_;                                                                            // ROS 2 topic
+        std::string ip_address_;                                                                            // PhotonFocus camera IP address
+        std::string config_file_;                                                                           // YAML file path
+        std::string tag_;                                                                                   // camera type tag
+        cv::Mat hist;                                                                                       // last histogram
+        rclcpp::Time last_time_;                                                                            // last time
+        bool histagram_enabled_;                                                                            // whether histogram is enabled
+        rclcpp::Service<airlab_photonfocus_ros2_driver::srv::AutoExposure>::SharedPtr exposure_service_;   // ROS 2 service
+        std::condition_variable cv;                                                                         // condition variable for service parallelism
+        std::mutex mtx;                                                                                     // mutex for racing condition
+        int width;                                                                                          // width of the image
+        int height;                                                                                         // height of the image
 
     public:
         /**
@@ -87,10 +160,9 @@ namespace AIRLab {
 
             // Publishers
             image_publisher_ = this->create_publisher<sensor_msgs::msg::Image>(image_topic_, 1);
-            hist_publisher_ = this->create_publisher<sensor_msgs::msg::Image>(hist_topic_, 1);
 
             // Service
-            exposure_service_ = this->create_service<std_srvs::srv::Empty>("auto_exposure", 
+            exposure_service_ = this->create_service<airlab_photonfocus_ros2_driver::srv::AutoExposure>("auto_exposure", 
                 std::bind(&PhotonFocusDriver::autoExposure, this, std::placeholders::_1, std::placeholders::_2));
 
             // Initialize camera
@@ -139,6 +211,10 @@ namespace AIRLab {
             } catch (const std::exception& e) {
                 RCLCPP_ERROR(this->get_logger(), "%s", e.what());
             }
+
+            // debugging publisher
+            if (histagram_enabled_)
+                hist_publisher_ = this->create_publisher<sensor_msgs::msg::Image>(hist_topic_, 1);
         }
 
         /**
@@ -158,7 +234,7 @@ namespace AIRLab {
          * @param img Image to be published.
          */
         void publishImage(const cv::Mat& img) {  
-            // Convert image to ROS 2 message
+            // Copy the data from the original image to the new one
             cv_bridge::CvImage cv_image;
             cv_image.encoding = "mono8";
             cv_image.image = img;
@@ -215,9 +291,18 @@ namespace AIRLab {
             }
         }
 
-        void autoExposure(const std::shared_ptr<std_srvs::srv::Empty::Request> request, 
-                    std::shared_ptr<std_srvs::srv::Empty::Response> response) {
+        void autoExposure(const std::shared_ptr<airlab_photonfocus_ros2_driver::srv::AutoExposure::Request> request, 
+                    std::shared_ptr<airlab_photonfocus_ros2_driver::srv::AutoExposure::Response> response) {
             RCLCPP_INFO(this->get_logger(), "Auto Exposure Service called");
+
+            if (request == nullptr) {
+                response = nullptr;
+                RCLCPP_ERROR(this->get_logger(), "Auto Exposure Service called with nullptr param!");
+                return;
+            }
+            
+            // Cast the int64 to an int
+            int query = static_cast<int>(request->wavelength);
 
             std::map<float, float> exposure_correlation;
             std::map<float, float> exposure_chi_square;
@@ -228,10 +313,21 @@ namespace AIRLab {
             float max_chi_square = std::numeric_limits<float>::min();
 
             cv::Mat reference_hist = cv::Mat::zeros(256, 1, CV_32F);
-            reference_hist.at<float>(8, 0) = 1.0;
-            reference_hist.at<float>(56, 0) = 1.0;
-            reference_hist.at<float>(69, 0) = 1.0;
-            reference_hist.at<float>(220, 0) = 1.0;
+
+            // check for the query index
+            auto it = MAP_CALIB.find(query);
+            if (it != MAP_CALIB.end()) {
+                reference_hist.at<float>(LIGHT_2_GRAYSCALE(it->second.black), 0) = 1.0;
+                reference_hist.at<float>(LIGHT_2_GRAYSCALE(it->second.dark_gray), 0) = 1.0;
+                reference_hist.at<float>(LIGHT_2_GRAYSCALE(it->second.light_gray), 0) = 1.0;
+                reference_hist.at<float>(LIGHT_2_GRAYSCALE(it->second.white), 0) = 1.0;
+            } else {
+                // Handle the case where the key is not found in the map
+                reference_hist.at<float>(LIGHT_2_GRAYSCALE(MAP_CALIB.begin()->second.black), 0) = 1.0;
+                reference_hist.at<float>(LIGHT_2_GRAYSCALE(MAP_CALIB.begin()->second.dark_gray), 0) = 1.0;
+                reference_hist.at<float>(LIGHT_2_GRAYSCALE(MAP_CALIB.begin()->second.light_gray), 0) = 1.0;
+                reference_hist.at<float>(LIGHT_2_GRAYSCALE(MAP_CALIB.begin()->second.white), 0) = 1.0;
+            }
 
             for (double exposure = 13.0; exposure <= 66586.0; exposure += 1000.0) {
                 camera_->setDeviceAttributeDouble("ExposureTime", exposure);
@@ -280,11 +376,12 @@ namespace AIRLab {
                 RCLCPP_INFO(this->get_logger(), "Exposure: %f us - Score: %f", exposure, total);
             }
 
-            double best_exposure_ = pq.top().second;
+            float best_exposure_ = pq.top().second;
             camera_->setDeviceAttributeDouble("ExposureTime", best_exposure_);
             RCLCPP_INFO(this->get_logger(), "================================================");
             RCLCPP_INFO(this->get_logger(), "BEST EXPOSURE TIME: %f", best_exposure_);
             RCLCPP_INFO(this->get_logger(), "================================================");
+            response->exposure_time = best_exposure_;
         }
     };
 }

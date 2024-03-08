@@ -85,7 +85,7 @@ namespace AIRLab {
     void PhotonFocusCamera::open() {
         // Test the network connection for the largest possible packet size that the network 
         // can support on the link between camera and controller
-        PvDeviceGEV* device = static_cast<PvDeviceGEV *>(this->device);
+        PvDeviceGEV* device = static_cast<PvDeviceGEV*>(this->device);
         CHECK_RESULT(device->NegotiatePacketSize());
 
         // Open a stream with the device
@@ -137,67 +137,26 @@ namespace AIRLab {
      */
     void PhotonFocusCamera::acquireImages() {
         std::unique_lock<std::mutex> lock(mtx);
-        char doodle[] = "|\\-|-/";
-        int doodle_index = 0;
-
-        double framerate = 0.0;
-        double bandwidth = 0.0;
-        long error_count = 0;
-        PvString last_error;
 
         while(!stop_thread) {
-            PvBuffer *buffer = NULL;
-            PvImage *image = NULL;
-            cv::Mat raw_image;
-            PvResult buffer_result, operation_result;
+            PvImage* image = NULL;
+            PvBuffer* buffer = NULL;
 
             // Retrieve next buffer
-            operation_result = pipeline->RetrieveNextBuffer(&buffer, 1000, &buffer_result);
+            PvResult result = pipeline->RetrieveNextBuffer(&buffer);
 
             // operation results says about the retrieving from the pipeline
-            if(operation_result.IsOK()) {
+            if(result.IsOK()) {
                 // buffer results says about the retrieved buffer status
-                if(buffer_result.IsOK()) {
-                    CHECK_RESULT(stream_parameters->GetFloatValue("AcquisitionRate", framerate));
-                    CHECK_RESULT(stream_parameters->GetFloatValue("Bandwidth", bandwidth));
-                    CHECK_RESULT(stream_parameters->GetIntegerValue("ErrorCount",error_count));
-                    CHECK_RESULT(stream_parameters->GetEnumValue("LastError",last_error));
-
-                    std::cout << std::fixed << std::setprecision(1);
-                    std::cout << doodle[doodle_index];
+                if(buffer->GetOperationResult().IsOK()) {
                     if(buffer->GetPayloadType() == PvPayloadTypeImage) {
                         image = buffer->GetImage();
-                        raw_image = cv::Mat(image->GetHeight(),image->GetWidth(),CV_8UC1,image->GetDataPointer());
-
-                        std::cout << " W:" << std::setw(4) << std::setfill(' ') << std::left << std::dec << raw_image.cols
-                                  << " H:" << std::setw(4) << std::setfill(' ') << std::left << std::dec << raw_image.rows;
-
-                        // !!!! THIS IS THE POINT WHERE THE EXTERNAL CALLBACK IS CALLED !!!!
-                        callback(raw_image);
+                        callback(cv::Mat(image->GetHeight(), image->GetWidth(), CV_8UC1, image->GetDataPointer()));
                     }
-                    else
-                        std::cout << " (buffer does not contain image)";
-
-                    std::cout << " "
-                              << std::setw(3) << std::setfill(' ') << "-- FPS:" << std::fixed << std::setprecision(1) << framerate
-                              << std::setw(3) << " -- Mb/s:" << (int)(bandwidth / 1000000.0)
-                              << " -- Errors:" << error_count << " -- " << std::setw(26) << std::setfill(' ') << std::left << last_error.GetAscii() << "\r";
-                }
-                else {
-                    std::cout << doodle[doodle_index] << " " << buffer_result.GetCode() << " " << buffer_result.GetDescription().GetAscii() << "\r";
                 }
                 // release the buffer back to the pipeline
                 pipeline->ReleaseBuffer(buffer);
             }
-            else
-                std::cout << doodle[doodle_index] << " " << buffer_result.GetCode() << " " << buffer_result.GetDescription().GetAscii() << "\r";
-
-            // when the interruption on the thread is called, its execution must reach this point! 
-            // in this way the whole should be in a clear state
-            if (stop_thread)
-                break;
-
-            ++doodle_index %= 6;
         }
     }
 

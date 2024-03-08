@@ -14,7 +14,7 @@ photonfocus_camera:
   height: 1088  # Height of the image in pixels
   offset_x: 0  # Offset of the image in the x-axis
   offset_y: 0  # Offset of the image in the y-axis
-  exposure_time: 10000  # Exposure time in microseconds (max 66586 us, min 13 us)
+  exposure_time: 5000  # Exposure time in microseconds (max 66586 us, min 13 us)
   acquisition_frame_rate_enable: True  # Enable the acquisition frame rate
   acquisition_frame_rate: 15  # Acquisition frame rate in Hz
   pixel_format: "MONO8"  # Pixel format of the image

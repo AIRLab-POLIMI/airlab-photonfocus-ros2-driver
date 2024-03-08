@@ -16,7 +16,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription([
         Node(
-            package='airlab-photonfocus-ros2-driver',
+            package='airlab_photonfocus_ros2_driver',
             executable='photonfocus_prisma_node',
             name='prisma_photonfocus',
             namespace='prisma',

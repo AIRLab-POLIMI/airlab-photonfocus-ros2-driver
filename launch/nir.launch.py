@@ -16,15 +16,15 @@ from launch_ros.actions import Node
 def generate_launch_description():
     return LaunchDescription([
         Node(
-            package='airlab-photonfocus-ros2-driver',
+            package='airlab_photonfocus_ros2_driver',
             executable='photonfocus_camera_node',
             name='nir_photonfocus',
             namespace='nir',
             parameters=[
                 {'topic': '/nir',
                  'frame_id': 'nir_camera_link',
-                 'ip_address': '192.168.1.38', #'10.79.2.78',
-                 'config_file_path': '/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-driver/config/nir_camera.yaml'}
+                 'ip_address': '192.168.0.102', #'10.79.2.78',
+                 'config_file_path': '/home/airlab/ros2_ws/src/airlab_photonfocus_ros2_driver/config/nir_camera.yaml'}
             ]
         )
     ])

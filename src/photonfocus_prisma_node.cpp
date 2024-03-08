@@ -43,25 +43,45 @@ namespace AIRLab {
         const int WIDTH = 2048;
         const int HEIGHT = 1088;
 
+        // nir and vis dimensions
+        const int VIS_WIDTH = 2048;
+        const int VIS_HEIGHT = 1088;
+        const int NIR_WIDTH = 2045;
+        const int NIR_HEIGHT = 1085;
+
+        // nir and vis offsets
+        const int VIS_OFFSET_X = 0;
+        const int VIS_OFFSET_Y = 0;
+        const int NIR_OFFSET_X = 3;
+        const int NIR_OFFSET_Y = 3;
+
         // mosaicing pattern NxN
         const int VIS_MOSAIC_SIZE = 4;
         const int NIR_MOSAIC_SIZE = 5;
 
-        // sub-images size
-        const int VIS_W = WIDTH / VIS_MOSAIC_SIZE;
-        const int VIS_H = HEIGHT / VIS_MOSAIC_SIZE;
-        const int NIR_W = WIDTH / NIR_MOSAIC_SIZE;
-        const int NIR_H = HEIGHT / NIR_MOSAIC_SIZE;
+        const int VIS_BANDS = VIS_MOSAIC_SIZE * VIS_MOSAIC_SIZE;
+        const int NIR_BANDS = NIR_MOSAIC_SIZE * NIR_MOSAIC_SIZE;
 
-        // limits
-        const int VIS_W_LIMIT = WIDTH - VIS_MOSAIC_SIZE;
-        const int VIS_H_LIMIT = HEIGHT - VIS_MOSAIC_SIZE;
-        const int NIR_W_LIMIT = WIDTH - NIR_MOSAIC_SIZE;
-        const int NIR_H_LIMIT = HEIGHT - NIR_MOSAIC_SIZE;
+        // sub-images size
+        const int VIS_W = 512;  // 512 x 4 = 2048
+        const int VIS_H = 272;  // 271 x 4 = 1088
+        const int NIR_W = 409;  // 409 x 5 = 2045
+        const int NIR_H = 217;  // 217 x 5 = 1085
 
         // spectral bands in nm
-        const std::vector<int> VIS_BANDS_ = { 470, 480, 490, 500, 510, 520, 530, 540, 550, 560, 570, 580, 590, 600, 610, 620 };
-        const std::vector<int> NIR_BANDS_ = { 600, 615, 630, 645, 660, 675, 700, 715, 730, 745, 760, 775, 790, 805, 820, 835, 850, 875, 890, 900, 915, 930, 945, 960, 975 };
+        const std::vector<int> VIS_BANDS_ = { 
+            465, 546, 586, 630,
+            474, 534, 578, 624,
+            485, 522, 562, 608,
+            496, 510, 548, 600
+        };
+        const std::vector<int> NIR_BANDS_ = { 
+            915, 930, 945, 960, 975,
+            835, 850, 875, 890, 900,
+            760, 775, 790, 805, 820,
+            675, 700, 715, 730, 745,
+            600, 615, 630, 645, 660
+        };
     
     private:
         // topics
@@ -79,6 +99,10 @@ namespace AIRLab {
         // publishers
         std::map<int, rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr> vis_pubs_;
         std::map<int, rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr> nir_pubs_;
+
+        // mosaic view
+        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr vis_mosaic_pub_;
+        rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr nir_mosaic_pub_;
 
         // images
         std::map<int, cv::Mat> vis_imgs_;
@@ -117,6 +141,9 @@ namespace AIRLab {
                 nir_pubs_[band] = this->create_publisher<sensor_msgs::msg::Image>("/nir_" + std::to_string(band) + "_nm", 10);
                 nir_imgs_[band] = cv::Mat::zeros(NIR_H, NIR_W, CV_8UC1);
             }
+
+            vis_mosaic_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/vis_mosaic", 10);
+            nir_mosaic_pub_ = this->create_publisher<sensor_msgs::msg::Image>("/nir_mosaic", 10);
         }
 
     private:
@@ -137,13 +164,24 @@ namespace AIRLab {
             cv::Mat& img = cv_ptr->image;
 
             // de-mosaicing
-            for (int r = 0; r <= VIS_H_LIMIT; r += VIS_MOSAIC_SIZE) {
-                for (int c = 0; c <= VIS_W_LIMIT; c += VIS_MOSAIC_SIZE) {
+            int new_c = 0;
+            int new_r = 0;
+            for (int r = VIS_OFFSET_Y; r < VIS_HEIGHT + VIS_OFFSET_Y; r += VIS_MOSAIC_SIZE) {
+                new_c = 0;
+                for (int c = VIS_OFFSET_X; c < VIS_WIDTH + VIS_OFFSET_X; c += VIS_MOSAIC_SIZE) {
                     int i = 0, j = 0;
-                    for (auto& [band, vis_img] : vis_imgs_) {
-                        vis_img.at<uchar>(r / VIS_MOSAIC_SIZE, c / VIS_MOSAIC_SIZE) = img.at<uchar>(r + ((i++) / VIS_MOSAIC_SIZE), c + ((j++) % VIS_MOSAIC_SIZE));
+                    for (int band : VIS_BANDS_) {
+                        // decomposition
+                        vis_imgs_[band].at<uchar>(new_r, new_c) = img.at<uchar>(r + i, c + j);
+
+                        // pattern update
+                        j = (j + 1) % VIS_MOSAIC_SIZE;
+                        if (j == 0)
+                            i++;
                     }
+                    new_c++;
                 }
+                new_r++;
             }
 
             // preparing ROS format
@@ -159,6 +197,32 @@ namespace AIRLab {
                 image_ = *cv_image.toImageMsg();
                 vis_pubs_[band]->publish(image_);
             }
+
+            // Create the grid image
+            cv::Mat gridImage(VIS_H * VIS_MOSAIC_SIZE, VIS_W * VIS_MOSAIC_SIZE, CV_8UC1);
+
+            // Populate the grid
+            for (int row = 0; row < VIS_MOSAIC_SIZE; ++row) {
+                for (int col = 0; col < VIS_MOSAIC_SIZE; ++col) {
+                    int imageIndex = row * VIS_MOSAIC_SIZE + col;
+                    if (imageIndex < VIS_BANDS) {
+                        cv::Rect roi(col * VIS_W, row * VIS_H, VIS_W, VIS_H);
+                        vis_imgs_[VIS_BANDS_[imageIndex]].copyTo(gridImage(roi));
+
+                        // Add text to the ROI
+                        std::string text = "Band: " + std::to_string(VIS_BANDS_[imageIndex]) + " nm";
+                        int fontFace = cv::FONT_HERSHEY_SIMPLEX;
+                        double fontScale = 1;
+                        int thickness = 2;
+                        cv::Point textOrg(roi.x, roi.y + VIS_H - 10);
+                        cv::putText(gridImage, text, textOrg, fontFace, fontScale, cv::Scalar::all(255), thickness, 8);
+                    }
+                }
+            }
+
+            cv_image.image = gridImage;
+            image_ = *cv_image.toImageMsg();
+            vis_mosaic_pub_->publish(image_);
         }
 
         /**
@@ -178,13 +242,24 @@ namespace AIRLab {
             cv::Mat& img = cv_ptr->image;
 
             // de-mosaicing
-            for (int r = 0; r <= NIR_H_LIMIT; r += NIR_MOSAIC_SIZE) {
-                for (int c = 0; c <= NIR_W_LIMIT; c += NIR_MOSAIC_SIZE) {
+            int new_c = 0;
+            int new_r = 0;
+            for (int r = NIR_OFFSET_Y; r < NIR_HEIGHT + NIR_OFFSET_Y; r += NIR_MOSAIC_SIZE) {
+                new_c = 0;
+                for (int c = NIR_OFFSET_X; c < NIR_WIDTH + NIR_OFFSET_X; c += NIR_MOSAIC_SIZE) {
                     int i = 0, j = 0;
-                    for (auto& [band, nir_img] : nir_imgs_) {
-                        nir_img.at<uchar>(r / NIR_MOSAIC_SIZE, c / NIR_MOSAIC_SIZE) = img.at<uchar>(r + ((i++) / NIR_MOSAIC_SIZE), c + ((j++) % VIS_MOSAIC_SIZE));
+                    for (int band : NIR_BANDS_) {
+                        // decomposition
+                        nir_imgs_[band].at<uchar>(new_r, new_c) = img.at<uchar>(r + i, c + j);
+
+                        // pattern update
+                        j = (j + 1) % NIR_MOSAIC_SIZE;
+                        if (j == 0)
+                            i++;
                     }
+                    new_c++;
                 }
+                new_r++;
             }
 
             // preparing ROS format
@@ -200,6 +275,32 @@ namespace AIRLab {
                 image_ = *cv_image.toImageMsg();
                 nir_pubs_[band]->publish(image_);
             }
+
+            // Create the grid image
+            cv::Mat gridImage(NIR_H * NIR_MOSAIC_SIZE, NIR_W * NIR_MOSAIC_SIZE, CV_8UC1);
+
+            // Populate the grid
+            for (int row = 0; row < NIR_MOSAIC_SIZE; ++row) {
+                for (int col = 0; col < NIR_MOSAIC_SIZE; ++col) {
+                    int imageIndex = row * NIR_MOSAIC_SIZE + col;
+                    if (imageIndex < NIR_BANDS) {
+                        cv::Rect roi(col * NIR_W, row * NIR_H, NIR_W, NIR_H);
+                        nir_imgs_[NIR_BANDS_[imageIndex]].copyTo(gridImage(roi));
+
+                        // Add text to the ROI
+                        std::string text = "Band: " + std::to_string(NIR_BANDS_[imageIndex]) + " nm";
+                        int fontFace = cv::FONT_HERSHEY_SIMPLEX;
+                        double fontScale = 1;
+                        int thickness = 2;
+                        cv::Point textOrg(roi.x, roi.y + NIR_H / 2 - 10);
+                        cv::putText(gridImage, text, textOrg, fontFace, fontScale, cv::Scalar::all(255), thickness, 8);
+                    }
+                }
+            }
+
+            cv_image.image = gridImage;
+            image_ = *cv_image.toImageMsg();
+            nir_mosaic_pub_->publish(image_);
         }
     };
 }

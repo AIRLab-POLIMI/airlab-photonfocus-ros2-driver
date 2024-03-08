@@ -19,28 +19,28 @@ def generate_launch_description():
     return LaunchDescription([
         # NIR camera
         Node(
-            package='airlab-photonfocus-ros2-driver',
+            package='airlab_photonfocus_ros2_driver',
             executable='photonfocus_camera_node',
             name='nir_photonfocus',
             namespace='nir',
             parameters=[
                 {'topic': '/nir',
                  'frame_id': 'nir_camera_link',
-                 'ip_address': '192.168.0.102', #'192.168.1.35'',
-                 'config_file_path': '/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-driver/config/nir_camera.yaml'}
+                 'ip_address': '192.168.1.38',
+                 'config_file_path': '/home/airlab/ros2_ws/src/airlab_photonfocus_ros2_driver/config/nir_camera.yaml'}
             ]
         ),
         # VIS camera
         Node(
-            package='airlab-photonfocus-ros2-driver',
+            package='airlab_photonfocus_ros2_driver',
             executable='photonfocus_camera_node',
             name='vis_photonfocus',
             namespace='vis',
             parameters=[
                 {'topic': '/vis',
                  'frame_id': 'vis_camera_link',
-                 'ip_address': '192.168.0.103', #'192.168.1.38',
-                 'config_file_path': '/home/airlab/ros2_ws/src/airlab-photonfocus-ros2-driver/config/vis_camera.yaml'}
+                 'ip_address': '192.168.1.35',
+                 'config_file_path': '/home/airlab/ros2_ws/src/airlab_photonfocus_ros2_driver/config/vis_camera.yaml'}
             ]
         )
     ])

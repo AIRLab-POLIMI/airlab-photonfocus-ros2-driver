@@ -1,14 +1,14 @@
 # =====================================================================================================================
-# File: photonfocus_camera.yaml
+# File: CMakeLists.txt
 # Author: Mirko Usuelli (Ph.D. Candidate, Politecnico di Milano @ AIRLab)
 # Email: mirko.usuell@polimi.it
 # Description: This file contains the CMakelists.txt for the photonfocus_camera package.
 # ---------------------------------------------------------------------------------------------------------------------
 # Created on: 05/02/2024
-# Last Modified: 12/02/2024
+# Last Modified: 04/03/2024
 # =====================================================================================================================
 cmake_minimum_required(VERSION 3.5)
-project(airlab-photonfocus-ros2-driver)
+project(airlab_photonfocus_ros2_driver)
 
 # Default to C99
 if(NOT CMAKE_C_STANDARD)
@@ -32,6 +32,9 @@ find_package(sensor_msgs REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(yaml_cpp_vendor REQUIRED)
 find_package(std_srvs REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
+
+rosidl_generate_interfaces(${PROJECT_NAME} "srv/AutoExposure.srv" )
 
 # External cmake
 include(cmake/FindEbus-sdk.cmake)
@@ -74,6 +77,7 @@ ament_target_dependencies(airlab_photonfocus
 
 # Add executable
 add_executable(photonfocus_camera_node src/photonfocus_camera_node.cpp)
+rosidl_target_interfaces(photonfocus_camera_node ${PROJECT_NAME} "rosidl_typesupport_cpp")
 target_link_libraries(photonfocus_camera_node airlab_photonfocus)
 
 add_executable(photonfocus_prisma_node src/photonfocus_prisma_node.cpp)

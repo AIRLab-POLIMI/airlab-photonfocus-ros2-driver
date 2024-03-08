@@ -113,7 +113,7 @@ namespace AIRLab {
 
     public:
         // Callback function to notify the user when a new image is available
-        std::function<void(const cv::Mat &image)> callback;
+        std::function<void(const cv::Mat& img)> callback;
 
         /**
          * Constructor
