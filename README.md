@@ -128,9 +128,14 @@ The following bands in nm are decomposed:
 </div>
 
 ### Results
-VIS prisma decomposition:
+- **VIS** prisma decomposition:
 <div align="center">
-<img src="img/result.png" width="800">
+<img src="img/vis_prisma.png" width="800">
+</div>
+
+- **NIR** prisma decomposition:
+<div align="center">
+<img src="img/nir_prisma.png" width="800">
 </div>
 
 ### Notes
